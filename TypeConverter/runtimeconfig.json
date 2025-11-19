@@ -1,0 +1,12 @@
+{
+  "frameworks": [
+    {
+      "name": "Microsoft.AspNetCore.App",
+      "version": "9.0.0"
+    },
+    {
+      "name": "Microsoft.AspNetCore.Authorization",
+      "version": "9.0.0"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="DTO\Shitty\**" />
+    <EmbeddedResource Remove="DTO\Shitty\**" />
+    <None Remove="DTO\Shitty\**" />
+  </ItemGroup>
+
+</Project>
