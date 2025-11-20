@@ -11,8 +11,12 @@ internal static class Executor
         var tsClasses = generator.TransformTypes();
         var count = 0;
         if (generator.Config.CleanOutputDirectory)
+        {
             foreach (var file in new DirectoryInfo(generator.Config.OutputDirectory).EnumerateFiles($"*{generator.Config.FileExtension}"))
+            {
                 file.Delete();
+            }
+        }
 
         foreach (var tsClass in tsClasses)
         {

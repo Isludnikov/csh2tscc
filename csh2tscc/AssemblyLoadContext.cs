@@ -8,12 +8,18 @@ public class CustomAssemblyLoadContext(IEnumerable<string> basePath) : AssemblyL
     protected override Assembly? Load(AssemblyName assemblyName)
     {
         var loadedAssembly = Default.Assemblies.FirstOrDefault(a => a.GetName().Name == assemblyName.Name);
-        if (loadedAssembly != null) return loadedAssembly;
+        if (loadedAssembly != null)
+        {
+            return loadedAssembly;
+        }
 
         foreach (var basP in basePath)
         {
             var assemblyPath = Path.Combine(basP, assemblyName.Name + ".dll");
-            if (File.Exists(assemblyPath)) return LoadFromAssemblyPath(assemblyPath);
+            if (File.Exists(assemblyPath))
+            {
+                return LoadFromAssemblyPath(assemblyPath);
+            }
         }
 
         try

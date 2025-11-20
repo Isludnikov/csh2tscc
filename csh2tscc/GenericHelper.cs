@@ -9,7 +9,9 @@ internal class GenericHelper
     private static int GenericParameterCount(Type type)
     {
         if (!type.IsGenericType)
+        {
             return 0;
+        }
 
         var genericTypeDefName = type.GetGenericTypeDefinition().Name;
         var tickIndex = genericTypeDefName.LastIndexOf('`');

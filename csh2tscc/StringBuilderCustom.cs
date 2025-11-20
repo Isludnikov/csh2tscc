@@ -4,11 +4,14 @@ namespace csh2tscc;
 
 internal class StringBuilderCustom(bool verbose)
 {
-    private readonly StringBuilder _sb= new();
+    private readonly StringBuilder _sb = new();
 
     public void AppendDebugLine(string message)
     {
-        if (verbose) _sb.AppendLine("//" + message);
+        if (verbose)
+        {
+            _sb.AppendLine("//" + message);
+        }
     }
 
     public void Append(char chr)

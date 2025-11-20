@@ -1,7 +1,7 @@
-using System.Collections.Frozen;
-using System.Text.Json.Serialization;
 using csh2tscc;
 using dto.DTO.Extensions;
+using System.Collections.Frozen;
+using System.Text.Json.Serialization;
 
 namespace tests;
 
@@ -13,6 +13,7 @@ public class TypesGeneratorTests
     [TestCase(".Generics.Enumerable")]
     [TestCase(".Generics.MultiGenerics")]
     [TestCase(".Required")]
+    [TestCase(".Nullability")]
     public void TestDryGeneration(string subpath)
     {
         var config = new TypesGeneratorParameters
@@ -24,7 +25,7 @@ public class TypesGeneratorTests
             SerializationNamingAttributes = new Dictionary<string, string> { { nameof(JsonStringEnumMemberNameAttribute), "Name" }, { nameof(CustomNameAttribute), "CustomName" } }.ToFrozenDictionary(),
             NoSerializationAttributes = [nameof(JsonIgnoreAttribute), nameof(NoSerializeAttribute)],
             OutputDirectory = "",
-            Verbose = false
+            Verbose = true
         };
         var generator = new TypesGenerator(config);
         var types = generator.TransformTypes();
@@ -55,8 +56,13 @@ public class TypesGeneratorTests
         });
         Directory.CreateDirectory(generator.Config.OutputDirectory);
         if (generator.Config.CleanOutputDirectory)
+        {
             foreach (var file in new DirectoryInfo(generator.Config.OutputDirectory).EnumerateFiles($"*{generator.Config.FileExtension}"))
+            {
                 file.Delete();
+            }
+        }
+
         var tsClasses = generator.TransformTypes();
         var count = 0;
         foreach (var tsClass in tsClasses)

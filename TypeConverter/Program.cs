@@ -1,6 +1,6 @@
-﻿using System.Collections.Frozen;
-using CommandLine;
+﻿using CommandLine;
 using csh2tscc;
+using System.Collections.Frozen;
 using TypeConverter.CommandLine;
 
 namespace TypeConverter;
@@ -15,7 +15,11 @@ internal class Program
         Parser.Default.ParseArguments<Options>(args)
             .WithParsed(RunOptions)
             .WithNotParsed(HandleParseError);
-        if (_hasErrors) return -1;
+        if (_hasErrors)
+        {
+            return -1;
+        }
+
         Executor.Executor.Execute(_typesGeneratorParameters ?? throw new Exception("config is empty"));
         return 0;
     }

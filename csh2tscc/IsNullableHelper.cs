@@ -12,39 +12,13 @@ public static class IsNullableHelper
     {
         var memberType = property.PropertyType;
         if (memberType.IsValueType)
-            return Nullable.GetUnderlyingType(memberType) != null;
-
-        var nullableContext = classType.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == NullableContextAttributeName);
-        if (nullableContext == null) return true; //Если контекст не установлен все ссылочные типы по умолчанию обнуляемы
-
-        var defaultNullable = (byte)nullableContext.ConstructorArguments[0].Value == 2;
-
-        var nullable = property.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == NullableAttributeName);
-        if (nullable is { ConstructorArguments.Count: 1 })
         {
-            var attributeArgument = nullable.ConstructorArguments[0];
-            if (attributeArgument.ArgumentType == typeof(byte[]))
-            {
-                var args = (ReadOnlyCollection<CustomAttributeTypedArgument>?)attributeArgument.Value;
-                if (args?.Count > 0 && args[0].ArgumentType == typeof(byte)) return (byte?)args[0].Value == 2;
-            }
-            else if (attributeArgument.ArgumentType == typeof(byte))
-            {
-                return (byte?)attributeArgument.Value == 2;
-            }
+            return Nullable.GetUnderlyingType(memberType) != null;
         }
 
-        return defaultNullable;
-    }
-    public static List<bool> IsNullableArray(Type classType, PropertyInfo property)
-    {
-        var memberType = property.PropertyType;
-        if (memberType.IsValueType)
-            return Nullable.GetUnderlyingType(memberType) != null ? [true] : [false];
-
         var nullableContext = classType.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == NullableContextAttributeName);
 
-        var defaultNullable = nullableContext != null ? (byte)nullableContext.ConstructorArguments[0].Value == 2 : true;
+        var defaultNullable = nullableContext == null ? true : (byte)nullableContext.ConstructorArguments[0].Value == 2;
 
         var nullable = property.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == NullableAttributeName);
         if (nullable is { ConstructorArguments.Count: 1 })
@@ -54,14 +28,48 @@ public static class IsNullableHelper
             {
                 var args = (ReadOnlyCollection<CustomAttributeTypedArgument>?)attributeArgument.Value;
                 if (args?.Count > 0 && args[0].ArgumentType == typeof(byte))
-                    return args.Select(x => (byte?)x.Value == 2).ToList();
+                {
+                    return (byte?)args[0].Value == 2;
+                }
             }
             else if (attributeArgument.ArgumentType == typeof(byte))
             {
-                return (byte?)attributeArgument.Value == 2 ? [true] : [false];
+                return (byte?)attributeArgument.Value == 2;
             }
         }
 
-        return defaultNullable ? [true] : [false];
+        return defaultNullable;
+    }
+    public static BooleanContainer IsNullableContainer(Type classType, PropertyInfo property)
+    {
+        var memberType = property.PropertyType;
+        if (memberType.IsValueType)
+        {
+            return Nullable.GetUnderlyingType(memberType) != null ? BooleanContainer.CreateTrue() : BooleanContainer.CreateFalse();
+        }
+
+        var nullableContext = classType.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == NullableContextAttributeName);
+
+        var defaultNullable = nullableContext == null ? true : (byte)nullableContext.ConstructorArguments[0].Value == 2;
+
+        var nullable = property.CustomAttributes.FirstOrDefault(x => x.AttributeType.FullName == NullableAttributeName);
+        if (nullable is { ConstructorArguments.Count: 1 })
+        {
+            var attributeArgument = nullable.ConstructorArguments[0];
+            if (attributeArgument.ArgumentType == typeof(byte[]))
+            {
+                var args = (ReadOnlyCollection<CustomAttributeTypedArgument>?)attributeArgument.Value;
+                if (args?.Count > 0 && args[0].ArgumentType == typeof(byte))
+                {
+                    return new BooleanContainer(args.Select(x => (byte?)x.Value == 2).ToArray(), defaultNullable);
+                }
+            }
+            else if (attributeArgument.ArgumentType == typeof(byte))
+            {
+                return (byte?)attributeArgument.Value == 2 ? BooleanContainer.CreateTrue() : BooleanContainer.CreateFalse();
+            }
+        }
+
+        return defaultNullable ? BooleanContainer.CreateTrue() : BooleanContainer.CreateFalse();
     }
 }

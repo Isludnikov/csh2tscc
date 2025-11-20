@@ -1,5 +1,4 @@
-﻿using System.Collections.Frozen;
-using System.Data;
+﻿using System.Data;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
@@ -13,7 +12,7 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
         typeof(float), typeof(double), typeof(ushort), typeof(decimal),
     ];
 
-    private static readonly FrozenSet<string> PreventNullAttributes = ["System.ComponentModel.DataAnnotations.RequiredAttribute", "System.Diagnostics.CodeAnalysis.NotNullAttribute"];
+
     private static readonly Type[] ToStringTypes = [
         typeof(Guid), typeof(DateTime), typeof(Uri), typeof(TimeSpan)
     ];
@@ -65,7 +64,11 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
                         {
                             var jic = (JsonIgnoreCondition)attribute.GetType().GetProperty("Condition").GetValue(attribute, null);
                             sb.AppendDebugLine($"Found attribute [{attribute.GetType().Name}] condition is [{jic.ToString()}]");
-                            if (jic == JsonIgnoreCondition.Always) isBlocked = true;
+                            if (jic == JsonIgnoreCondition.Always)
+                            {
+                                isBlocked = true;
+                            }
+
                             break;
                         }
                     default:
@@ -76,7 +79,10 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
             }
 
             if (nameAttributeCount > 1)
+            {
                 throw new InvalidDataException($"Property name [{value}] of type [{typeToWrite}] has more than one serialization naming attribute");
+            }
+
             if (isBlocked)
             {
                 sb.AppendDebugLine($"Serialization of the property [{field.Name}] is blocked");
@@ -98,12 +104,20 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
         var importsAdded = false;
         foreach (var affType in affected)
         {
-            if (affType == typeToWrite) continue;
+            if (affType == typeToWrite)
+            {
+                continue;
+            }
+
             sb.AppendLine($"import {{ {NormalizeClassName(GetTypeName(affType))} }} from \"./{NormalizeClassName(GetTypeName(affType))}\";");
             importsAdded = true;
         }
 
-        if (importsAdded) sb.AppendLine();
+        if (importsAdded)
+        {
+            sb.AppendLine();
+        }
+
         sb.AppendLine($"export interface {NormalizeClassName(GetTypeName(typeToWrite))}{genericHeader} {{");
 
         var properties = typeToWrite.GetProperties();
@@ -136,7 +150,11 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
                         {
                             var jic = (JsonIgnoreCondition)attribute.GetType().GetProperty("Condition").GetValue(attribute, null);
                             sb.AppendDebugLine($"Found attribute [{attribute.GetType().Name}] condition is [{jic.ToString()}]");
-                            if (jic == JsonIgnoreCondition.Always) isBlocked = true;
+                            if (jic == JsonIgnoreCondition.Always)
+                            {
+                                isBlocked = true;
+                            }
+
                             break;
                         }
                     default:
@@ -146,7 +164,11 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
                 }
             }
 
-            if (nameAttributeCount > 1) throw new InvalidDataException($"Property name [{value}] of type [{typeToWrite}] has more than one serialization naming attribute");
+            if (nameAttributeCount > 1)
+            {
+                throw new InvalidDataException($"Property name [{value}] of type [{typeToWrite}] has more than one serialization naming attribute");
+            }
+
             if (isBlocked)
             {
                 sb.AppendDebugLine($"Serialization of the property [{property.Name}] is blocked");
@@ -154,85 +176,151 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
             }
 
             var isNullableByDefinition = IsNullableHelper.IsNullable(typeToWrite, property);
-            if (isNullableByDefinition) sb.AppendDebugLine("Property is nullable by definition");
-            var hasNotNullableAttribute = HasNonNullableAttribute(property);
-            if (hasNotNullableAttribute) sb.AppendDebugLine("Property has non-nullable attribute");
+            if (isNullableByDefinition)
+            {
+                sb.AppendDebugLine("Property is nullable by definition");
+            }
+
+            var hasNotNullableAttribute = CommonHelper.HasNonNullableAttribute(property);
+            if (hasNotNullableAttribute)
+            {
+                sb.AppendDebugLine("Property has non-nullable attribute");
+            }
+
             var isNullable = isNullableByDefinition && !hasNotNullableAttribute;
-            sb.AppendLine($"  {value}{(isNullable ? "?" : string.Empty)}: {GetPropertyTypeTypescript(typeToWrite, property, property.PropertyType, affected, genericParameters, isNullable, hasNotNullableAttribute)};");
+            sb.AppendLine($"  {value}{(isNullable ? "?" : string.Empty)}: {GetPropertyTypeTypescript(typeToWrite, property, property.PropertyType, affected, genericParameters, isNullable, null, hasNotNullableAttribute)};");
         }
 
         sb.Append('}');
         return sb.ToString();
     }
 
-    private static bool HasNonNullableAttribute(PropertyInfo property)
-    {
-        var preventAttributeExists =
-            property.GetCustomAttributes().Any(x => PreventNullAttributes.Contains(x.GetType().FullName ?? string.Empty));
-        if (preventAttributeExists) return true;
-        var getMethod = property.GetGetMethod();
-        if (getMethod == null) return false;
-        var returnParameter = getMethod.ReturnParameter;
-        return returnParameter.GetCustomAttributes().Any(x => PreventNullAttributes.Contains(x.GetType().FullName ?? string.Empty));
-    }
-
     private string GetTypeName(Type type) => (parameters.UseFullNames ? type.FullName ?? type.Name : type.Name).Replace('.', '_');
 
-    private string GetPropertyTypeTypescript(Type classToWrite, PropertyInfo? propInfo, Type propertyType, IEnumerable<Type> affectedTypes, IEnumerable<Type> genericTypes, bool isNullable, bool suppressNullable = false)
+    private string GetPropertyTypeTypescript(Type classToWrite, PropertyInfo? propInfo, Type propertyType, IEnumerable<Type> affectedTypes, IEnumerable<Type> genericTypes, bool isNullable, BooleanContainer? booleanContainer, bool suppressNullable = false)
     {
         var nullable = propInfo != null ? IsNullableHelper.IsNullable(classToWrite, propInfo) : isNullable;
-        if (suppressNullable) nullable = false;
+        if (suppressNullable)
+        {
+            nullable = false;
+        }
+
         var checkedType = Nullable.GetUnderlyingType(propertyType);
-        if (checkedType != null) propertyType = checkedType;
+        if (checkedType != null)
+        {
+            propertyType = checkedType;
+        }
+
         if (parameters.CustomMap.TryGetValue(propertyType.Name, out var value))
-            return value + (nullable ? " | null" : string.Empty);
+        {
+            return CommonHelper.GetPropertyTypeWithNullable(value, nullable);
+        }
+
         if (!string.IsNullOrWhiteSpace(propertyType.FullName) &&
             parameters.CustomMap.TryGetValue(propertyType.FullName, out var value1))
-            return value1 + (nullable ? " | null" : string.Empty);
-        if (NumberTypes.Contains(propertyType)) return "number" + (nullable ? " | null" : string.Empty);
-        if (propertyType == typeof(bool)) return "boolean" + (nullable ? " | null" : string.Empty);
-        if (propertyType.IsEnum) return GetTypeName(propertyType) + (nullable ? " | null" : string.Empty);
-        if (propertyType == typeof(string)) return "string" + (nullable ? " | null" : string.Empty);
-        if (propertyType == typeof(object)) return "unknown";
-        var nullableList = propInfo == null ? [] : IsNullableHelper.IsNullableArray(classToWrite, propInfo);
+        {
+            return CommonHelper.GetPropertyTypeWithNullable(value1, nullable);
+        }
+
+        if (NumberTypes.Contains(propertyType))
+        {
+            return CommonHelper.GetPropertyTypeWithNullable("number", nullable);
+        }
+
+        if (propertyType == typeof(bool))
+        {
+            return CommonHelper.GetPropertyTypeWithNullable("boolean", nullable);
+        }
+
+        if (propertyType.IsEnum)
+        {
+            return CommonHelper.GetPropertyTypeWithNullable(GetTypeName(propertyType), nullable);
+        }
+
+        if (propertyType == typeof(string))
+        {
+            return CommonHelper.GetPropertyTypeWithNullable("string", nullable);
+        }
+
+        if (propertyType == typeof(object))
+        {
+            return "unknown";
+        }
+
+        var nullableList = propInfo == null ? booleanContainer : IsNullableHelper.IsNullableContainer(classToWrite, propInfo);
         if (propertyType.IsArray)
-            return GetPropertyTypeTypescript(classToWrite, null, propertyType.GetElementType()!, affectedTypes, genericTypes, nullableList.Count > 1 ? nullableList[1] : isNullable) + "[]" + (nullable ? " | null" : string.Empty);
+        {
+            return CommonHelper.GetPropertyTypeWithNullable(GetPropertyTypeTypescript(classToWrite, null, propertyType.GetElementType()!, affectedTypes, genericTypes, isNullable, nullableList) + "[]", nullable);
+        }
+
         if (propertyType.InstanceOfGenericInterface(typeof(IDictionary<,>)))
         {
             var genericArguments = propertyType.GetInterfaces().SingleOrDefault(x => x.InstanceOfGenericInterface(typeof(IDictionary<,>)))?.GetGenericArguments() ?? propertyType.GetGenericArguments();
             var enumerator = 1;
-            return $"Map<{GetPropertyTypeTypescript(classToWrite, null, genericArguments[0], affectedTypes, genericTypes, genericArguments[0].IsValueType ? IsNullableHelper.IsValueTypeNullable(genericArguments[0]) : SelectNullable(nullableList, enumerator++, nullable))}, {GetPropertyTypeTypescript(classToWrite, null, genericArguments[1], affectedTypes, genericTypes, genericArguments[1].IsValueType ? IsNullableHelper.IsValueTypeNullable(genericArguments[1]) : SelectNullable(nullableList, enumerator++, nullable))}>" + (nullable ? " | null" : string.Empty);
+            var keyTypeString = GetPropertyTypeTypescript(classToWrite, null, genericArguments[0], affectedTypes, genericTypes,
+                genericArguments[0].IsValueType
+                    ? IsNullableHelper.IsValueTypeNullable(genericArguments[0])
+                    : nullableList.GetValueAndMoveNext(), nullableList);
+            var valueTypeString = GetPropertyTypeTypescript(classToWrite, null, genericArguments[1], affectedTypes,
+                genericTypes,
+                genericArguments[1].IsValueType
+                    ? IsNullableHelper.IsValueTypeNullable(genericArguments[1])
+                    : nullableList.GetValueAndMoveNext(), nullableList);
+            return CommonHelper.GetPropertyTypeWithNullable($"Map<{keyTypeString}, {valueTypeString}>", nullable);
         }
 
         if (propertyType.InstanceOfGenericInterface(typeof(IEnumerable<>)))
         {
             var genericArguments = propertyType.GetGenericArguments();
-            return $"{GetPropertyTypeTypescript(classToWrite, null, genericArguments[0], affectedTypes, genericTypes, genericArguments[0].IsValueType ? IsNullableHelper.IsValueTypeNullable(genericArguments[0]) : SelectNullable(nullableList, 1, nullable))}[]" + (nullable ? " | null" : string.Empty);
+            var elementTypeString = GetPropertyTypeTypescript(classToWrite, null, genericArguments[0], affectedTypes,
+                genericTypes,
+                genericArguments[0].IsValueType
+                    ? IsNullableHelper.IsValueTypeNullable(genericArguments[0])
+                    : nullableList.GetValueAndMoveNext(), nullableList);
+            return CommonHelper.GetPropertyTypeWithNullable($"{elementTypeString}[]", nullable);
         }
 
-        if (ToStringTypes.Contains(propertyType)) return "string" + (nullable ? " | null" : string.Empty);
+        if (ToStringTypes.Contains(propertyType))
+        {
+            return CommonHelper.GetPropertyTypeWithNullable("string", nullable);
+        }
+
         if (propertyType.IsGenericType)
         {
             var localGenericArguments = propertyType.GetGenericArguments().Take(GenericHelper.LocalGenericParameterCount(propertyType)).ToArray();
-            var enumerator = 1;
-            return NormalizeClassName(GetTypeName(propertyType)) + "<" + localGenericArguments.Select((x, j) => GetPropertyTypeTypescript(classToWrite, null, x, affectedTypes, genericTypes, x.IsValueType ? IsNullableHelper.IsValueTypeNullable(x) : SelectNullable(nullableList, enumerator++, nullable))).Aggregate((i, j) => i + ", " + j) + ">" + (nullable ? " | null" : string.Empty);
+            var typeDefinition = NormalizeClassName(GetTypeName(propertyType)) + "<" + localGenericArguments
+                .Select((x, j) => GetPropertyTypeTypescript(classToWrite, null, x, affectedTypes, genericTypes,
+                    x.IsValueType
+                        ? IsNullableHelper.IsValueTypeNullable(x)
+                        : nullableList.GetValueAndMoveNext(), nullableList)).Aggregate((i, j) => i + ", " + j) + ">";
+
+            return CommonHelper.GetPropertyTypeWithNullable(typeDefinition, nullable);
         }
 
         if (affectedTypes.Any(x => x.FullName == propertyType.FullName) || genericTypes.Any(x => x.Name == propertyType.Name))
-            return NormalizeClassName(GetTypeName(propertyType)) + (nullable ? " | null" : string.Empty);
+        {
+            return CommonHelper.GetPropertyTypeWithNullable(NormalizeClassName(GetTypeName(propertyType)), nullable);
+        }
+
         throw new InvalidExpressionException($"Unsupported type [{propertyType.FullName}]");
     }
-
-    private static bool SelectNullable(List<bool> list, int enumerator, bool defaultValue) => list.Count <= enumerator ? defaultValue : list[enumerator];
 
     private List<Type> ListAffectedTypes(Type type)
     {
         var affected = new List<Type>();
-        if (type.IsGenericType) AddType(affected, type.GenericTypeArguments);
+        if (type.IsGenericType)
+        {
+            AddType(affected, type.GenericTypeArguments);
+        }
+
         var props = type.GetProperties();
         foreach (var prop in props)
         {
-            if (prop.PropertyType.IsGenericType) AddType(affected, prop.PropertyType.GenericTypeArguments);
+            if (prop.PropertyType.IsGenericType)
+            {
+                AddType(affected, prop.PropertyType.GenericTypeArguments);
+            }
+
             AddType(affected, [prop.PropertyType]);
         }
 
@@ -245,13 +333,23 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
         foreach (var type in types)
         {
             if (parameters.CustomMap.ContainsKey(type.Name) || (!string.IsNullOrWhiteSpace(type.FullName) && parameters.CustomMap.ContainsKey(type.FullName)))
+            {
                 continue;
+            }
+
             if (type.IsGenericType)
+            {
                 AddType(list, type.GenericTypeArguments);
+            }
+
             if (type.IsArray)
+            {
                 AddType(list, [type.GetElementType()!]);
+            }
             else if (type.FullName != null && StartsWith(type.FullName) && list.All(x => NormalizeClassName(x.FullName ?? x.Name) != NormalizeClassName(type.FullName ?? type.Name)))
+            {
                 list.Add(type);
+            }
         }
     }
 
@@ -273,8 +371,8 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
     private int RemoveTypes(List<Type> types)
     {
         var result = 0;
-        result += types.RemoveAll(t => parameters.CustomMap.Keys.Contains(t.Name));
-        result += types.RemoveAll(t => !string.IsNullOrWhiteSpace(t.FullName) && parameters.CustomMap.Keys.Contains(t.FullName));
+        result += types.RemoveAll(t => parameters.CustomMap.ContainsKey(t.Name));
+        result += types.RemoveAll(t => !string.IsNullOrWhiteSpace(t.FullName) && parameters.CustomMap.ContainsKey(t.FullName));
         result += types.RemoveAll(t => !string.IsNullOrWhiteSpace(t.FullName) && parameters.RootNamespacesExcluded.Any(x => t.FullName.Contains(x)));
         result += types.RemoveAll(t => t.GetInterfaces().Any(i => i.InstanceOfGenericType(typeof(IDictionary<,>))));
         result += types.RemoveAll(t => t.GetInterfaces().Any(i => i.InstanceOfGenericType(typeof(IEnumerable<>))));
