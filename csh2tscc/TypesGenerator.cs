@@ -7,6 +7,8 @@ namespace csh2tscc;
 
 public class TypesGenerator(TypesGeneratorParameters parameters)
 {
+    public static TypesGenerator Create(TypesGeneratorParameters parameters) => new(parameters);
+
     private static readonly Type[] NumberTypes = [
         typeof(int), typeof(uint), typeof(short), typeof(byte), typeof(sbyte), typeof(long), typeof(ulong),
         typeof(float), typeof(double), typeof(ushort), typeof(decimal),
@@ -22,7 +24,7 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
 
     private static string NormalizeClassName(string argName) => argName.Contains('`') ? argName.Remove(argName.LastIndexOf('`')) : argName;
 
-    private string BuildFileFromType(Type typeToWrite)
+    internal string BuildFileFromType(Type typeToWrite)
     {
         var sb = new StringBuilderCustom(parameters.Verbose);
         sb.AppendDebugLine("Debug mode");
@@ -305,7 +307,7 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
         throw new InvalidExpressionException($"Unsupported type [{propertyType.FullName}]");
     }
 
-    private List<Type> ListAffectedTypes(Type type)
+    internal List<Type> ListAffectedTypes(Type type)
     {
         var affected = new List<Type>();
         if (type.IsGenericType)
@@ -346,7 +348,7 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
             {
                 AddType(list, [type.GetElementType()!]);
             }
-            else if (type.FullName != null && StartsWith(type.FullName) && list.All(x => NormalizeClassName(x.FullName ?? x.Name) != NormalizeClassName(type.FullName ?? type.Name)))
+            else if (type.Namespace != null && StartsWith(type.Namespace) && type.GUID != Guid.Empty && list.All(x => NormalizeClassName(x.FullName ?? x.Name) != NormalizeClassName(type.FullName ?? type.Name)))
             {
                 list.Add(type);
             }

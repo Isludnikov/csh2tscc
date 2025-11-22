@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace tests;
 
-public class TypesGeneratorTests
+public class TypesGeneratorIntegrationTests
 {
     [Test]
     [TestCase("")]
