@@ -69,6 +69,7 @@ public class ClassConversionTask
             ShouldContain = [
                 "export interface AttributedType",
                 "id: number;", "name: string;",
+                "number2?: number | null;",
                 "description: string;",
                 "UUID: string;"
             ],

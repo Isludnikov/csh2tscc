@@ -1,5 +1,5 @@
 using csh2tscc;
-using dto.DTO.Extensions;
+using Dto.Integration.Tests.DTO.Extensions;
 using System.Collections.Frozen;
 using System.Text.Json.Serialization;
 
@@ -19,9 +19,9 @@ public class TypesGeneratorIntegrationTests
         var config = new TypesGeneratorParameters
         {
             CamelCaseProperties = true,
-            LibraryFileNames = ["dto.dll"],
-            RootNamespaces = ["dto.DTO" + subpath],
-            RootNamespacesExcluded = ["dto.DTO.Extensions"],
+            LibraryFileNames = ["Dto.Integration.Tests.dll"],
+            RootNamespaces = ["Dto.Integration.Tests.DTO" + subpath],
+            RootNamespacesExcluded = ["Dto.Integration.Tests.DTO.Extensions"],
             SerializationNamingAttributes = new Dictionary<string, string> { { nameof(JsonStringEnumMemberNameAttribute), "Name" }, { nameof(CustomNameAttribute), "CustomName" } }.ToFrozenDictionary(),
             NoSerializationAttributes = [nameof(JsonIgnoreAttribute), nameof(NoSerializeAttribute)],
             OutputDirectory = "",
@@ -43,9 +43,9 @@ public class TypesGeneratorIntegrationTests
         var generator = new TypesGenerator(new TypesGeneratorParameters
         {
             CamelCaseProperties = true,
-            LibraryFileNames = ["dto.dll"],
-            RootNamespaces = ["dto.DTO"],
-            RootNamespacesExcluded = ["dto.DTO.Extensions"],
+            LibraryFileNames = ["Dto.Integration.Tests.dll"],
+            RootNamespaces = ["Dto.Integration.Tests.DTO"],
+            RootNamespacesExcluded = ["Dto.Integration.Tests.DTO.Extensions"],
             SerializationNamingAttributes = new Dictionary<string, string> { { nameof(JsonStringEnumMemberNameAttribute), "Name" }, { nameof(CustomNameAttribute), "CustomName" } }.ToFrozenDictionary(),
             NoSerializationAttributes = [nameof(JsonIgnoreAttribute), nameof(NoSerializeAttribute)],
             UseFullNames = false,

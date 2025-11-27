@@ -2,7 +2,7 @@
 
 namespace csh2tscc;
 
-internal class GenericHelper
+internal static class GenericHelper
 {
     internal static int LocalGenericParameterCount(Type t) => t.IsNested ? GenericParameterCount(t) - GenericParameterCount(t.DeclaringType) : GenericParameterCount(t);
 

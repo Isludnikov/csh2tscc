@@ -25,7 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\csh2tscc\csh2tscc.csproj" />
-    <ProjectReference Include="..\dto\dto.csproj" />
+    <ProjectReference Include="..\Dto.Integration.Tests\Dto.Integration.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>

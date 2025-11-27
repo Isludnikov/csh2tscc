@@ -10,5 +10,5 @@ public enum SimpleEnum
     [JsonStringEnumMemberName("2")]
     Two,
     [JsonStringEnumMemberName("three")]
-    Three,
+    Three
 }

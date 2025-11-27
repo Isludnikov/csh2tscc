@@ -14,6 +14,6 @@ public class BooleanContainer(bool[] array, bool defaultValue)
         return array.Length <= _pointer ? array[0] : array[_pointer++];
     }
 
-    public static BooleanContainer CreateTrue() => new([true], true);
-    public static BooleanContainer CreateFalse() => new([false], false);
+    public static BooleanContainer CreateTrue() => new([], true);
+    public static BooleanContainer CreateFalse() => new([], false);
 }

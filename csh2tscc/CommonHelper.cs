@@ -17,12 +17,6 @@ public static class CommonHelper
         }
 
         var getMethod = property.GetGetMethod();
-        if (getMethod == null)
-        {
-            return false;
-        }
-
-        var returnParameter = getMethod.ReturnParameter;
-        return returnParameter.GetCustomAttributes().Any(x => PreventNullAttributes.Contains(x.GetType().FullName ?? string.Empty));
+        return getMethod != null && getMethod.ReturnParameter.GetCustomAttributes().Any(x => PreventNullAttributes.Contains(x.GetType().FullName ?? string.Empty));
     }
 }

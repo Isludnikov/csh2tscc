@@ -1,5 +1,5 @@
 ﻿using csh2tscc;
-using dto.DTO.Extensions;
+using Dto.Integration.Tests.DTO.Extensions;
 using System.Collections.Frozen;
 using System.Text.Json.Serialization;
 
@@ -29,8 +29,11 @@ public class AffectedClassTests
     {
         var affectedTypes = TypesGenerator.Create(Config).ListAffectedTypes(task.Klass);
 
-        Assert.That(task.ShouldContain.Count == 0 || task.ShouldContain.All(x => affectedTypes.Any(y=>y.GUID == x.GUID)), Is.True);
-        Assert.That(task.ShouldNotContain.Count == 0 || task.ShouldNotContain.All(x => affectedTypes.All(y=>y.GUID!=x.GUID)), Is.True);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(task.ShouldContain.Count == 0 || task.ShouldContain.All(x => affectedTypes.Any(y => y.GUID == x.GUID)), Is.True);
+            Assert.That(task.ShouldNotContain.Count == 0 || task.ShouldNotContain.All(x => affectedTypes.All(y => y.GUID != x.GUID)), Is.True);
+        }
 
     }
 }

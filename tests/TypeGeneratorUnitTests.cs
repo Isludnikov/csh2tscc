@@ -1,6 +1,6 @@
-﻿using System.Collections.Frozen;
-using csh2tscc;
-using dto.DTO.Extensions;
+﻿using csh2tscc;
+using Dto.Integration.Tests.DTO.Extensions;
+using System.Collections.Frozen;
 using System.Text.Json.Serialization;
 
 namespace tests;
