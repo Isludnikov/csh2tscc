@@ -19,10 +19,10 @@ public class Options
     [Option('f', "forbidAttributes", Required = false, HelpText = "Attributes forbid the serialization of property")]
     public IEnumerable<string> ForbidSerializationAttributes { get; set; } = [];
 
-    [Option(Default = true, HelpText = "Properties names to camelCase")]
+    [Option(Default = false, HelpText = "Properties names to camelCase")]
     public bool CamelCase { get; set; }
 
-    [Option(Default = true, HelpText = "Clean output directory from previously generated files")]
+    [Option(Default = false, HelpText = "Clean output directory from previously generated files")]
     public bool CleanOutputDirectory { get; set; }
 
     [Option(Default = ".tsx", HelpText = "files extension")]
