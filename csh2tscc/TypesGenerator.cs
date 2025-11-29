@@ -22,7 +22,7 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
 
     public Dictionary<string, string> TransformTypes() => GetTypes().ToDictionary(typeToWrite => NormalizeClassName(GetTypeName(typeToWrite)) + ".tsx", BuildFileFromType);
 
-    private static string NormalizeClassName(string argName) => argName.Contains('`') ? argName.Remove(argName.LastIndexOf('`')) : argName;
+    private static string NormalizeClassName(string argName) => argName.Contains('`') ? argName[..argName.LastIndexOf('`')] : argName;
 
     internal string BuildFileFromType(Type typeToWrite)
     {
@@ -65,7 +65,7 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
                         when (attribute.GetType().FullName?.StartsWith("System.Text.Json") ?? false):
                         {
                             var jic = (JsonIgnoreCondition)attribute.GetType().GetProperty("Condition").GetValue(attribute, null);
-                            sb.AppendDebugLine($"Found attribute [{attribute.GetType().Name}] condition is [{jic.ToString()}]");
+                            sb.AppendDebugLine($"Found attribute [{attribute.GetType().Name}] condition is [{jic}]");
                             if (jic == JsonIgnoreCondition.Always)
                             {
                                 isBlocked = true;
@@ -151,7 +151,7 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
                     case nameof(JsonIgnoreAttribute):
                         {
                             var jic = (JsonIgnoreCondition)attribute.GetType().GetProperty("Condition").GetValue(attribute, null);
-                            sb.AppendDebugLine($"Found attribute [{attribute.GetType().Name}] condition is [{jic.ToString()}]");
+                            sb.AppendDebugLine($"Found attribute [{attribute.GetType().Name}] condition is [{jic}]");
                             if (jic == JsonIgnoreCondition.Always)
                             {
                                 isBlocked = true;
@@ -373,7 +373,7 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
             var exactPath = Path.GetFullPath(param);
             var context = new CustomAssemblyLoadContext(filePaths);
             var assembly = context.LoadAssembly(exactPath);
-            types.AddRange(assembly.GetExportedTypes().Where(t => IncludedType(t.FullName) && !t.Name.StartsWith('<')));
+            types.AddRange(assembly.GetExportedTypes().Where(t => IncludedType(t.FullName) && !t.Name.StartsWith('<') && !ExcludedType(t.FullName)));
         }
 
         return types;
@@ -393,5 +393,8 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
     private string GetClassPropertyNameToWrite(string s) => parameters.CamelCaseProperties ? char.ToLowerInvariant(s[0]) + s[1..] : s;
 
     private bool IncludedType(string needle) => parameters.RootNamespaces.Any(needle.StartsWith);
+
+    private bool ExcludedType(string needle) => parameters.RootNamespacesExcluded.Count != 0 &&
+                                                parameters.RootNamespacesExcluded.Any(needle.StartsWith);
 
 }
