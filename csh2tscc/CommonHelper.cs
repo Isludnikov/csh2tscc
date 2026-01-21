@@ -6,7 +6,7 @@ namespace csh2tscc;
 public static class CommonHelper
 {
     private static readonly FrozenSet<string> PreventNullAttributes = ["System.ComponentModel.DataAnnotations.RequiredAttribute", "System.Diagnostics.CodeAnalysis.NotNullAttribute"];
-    internal static string GetPropertyTypeWithNullable(string strType, bool isNullable) => strType + (isNullable ? " | null" : string.Empty);
+    internal static string GetPropertyTypeWithNullable(string strType, bool isNullable) => strType + (isNullable ? TypeScriptConstants.NullableUnion : string.Empty);
     internal static bool HasNonNullableAttribute(PropertyInfo property)
     {
         var preventAttributeExists =

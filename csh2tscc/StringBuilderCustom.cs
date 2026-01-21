@@ -23,6 +23,10 @@ internal class StringBuilderCustom(bool verbose)
     {
         _sb.AppendLine(message);
     }
+    public void AppendLine(char chr)
+    {
+        _sb.AppendLine(chr + Environment.NewLine);
+    }
 
     public override string ToString() => _sb.ToString();
 }

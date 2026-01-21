@@ -37,8 +37,8 @@ internal class Program
             RootNamespacesExcluded = opts.NamespacesExcluded.ToFrozenSet(),
             UseFullNames = opts.UseFullNames,
             NoSerializationAttributes = opts.ForbidSerializationAttributes.ToFrozenSet(),
-            CustomMap = opts.CustomMap.SplitToDictionary(),
-            SerializationNamingAttributes = opts.SerializationNaming.SplitToDictionary(),
+            CustomMap = opts.CustomMap.SplitToDictionary("--customMap"),
+            SerializationNamingAttributes = opts.SerializationNaming.SplitToDictionary("--serializationNaming"),
             Verbose = opts.Verbose
         };
     }

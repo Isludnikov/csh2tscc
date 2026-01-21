@@ -7,23 +7,40 @@ internal static class Executor
     public static void Execute(TypesGeneratorParameters parameters)
     {
         var generator = TypesGenerator.Create(parameters);
-        Directory.CreateDirectory(generator.Config.OutputDirectory);
-        var tsClasses = generator.TransformTypes();
-        if (generator.Config.CleanOutputDirectory)
+        var config = generator.Config;
+
+        // Generate TypeScript definitions in memory
+        var generatedFiles = generator.TransformTypes();
+
+        // Prepare output directory
+        Directory.CreateDirectory(config.OutputDirectory);
+        if (config.CleanOutputDirectory)
         {
-            foreach (var file in new DirectoryInfo(generator.Config.OutputDirectory).EnumerateFiles($"*{generator.Config.FileExtension}"))
-            {
-                file.Delete();
-            }
-        }
-        var filesCount = 0;
-        foreach (var tsClass in tsClasses)
-        {
-            File.WriteAllText($"{generator.Config.OutputDirectory}/{tsClass.Key}", tsClass.Value);
-            ++filesCount;
-            Console.WriteLine($"File [{tsClass.Key}] created");
+            CleanOutputDirectory(config.OutputDirectory, config.FileExtension);
         }
 
-        Console.WriteLine($"[{filesCount}] file(s) generated");
+        // Write generated files to disk
+        WriteGeneratedFiles(config.OutputDirectory, generatedFiles);
+    }
+
+    private static void CleanOutputDirectory(string outputDirectory, string fileExtension)
+    {
+        var directory = new DirectoryInfo(outputDirectory);
+        foreach (var file in directory.EnumerateFiles($"*{fileExtension}"))
+        {
+            file.Delete();
+        }
+    }
+
+    private static void WriteGeneratedFiles(string outputDirectory, Dictionary<string, string> files)
+    {
+        foreach (var (fileName, content) in files)
+        {
+            var filePath = Path.Combine(outputDirectory, fileName);
+            File.WriteAllText(filePath, content);
+            Console.WriteLine($"File [{fileName}] created");
+        }
+
+        Console.WriteLine($"[{files.Count}] file(s) generated");
     }
 }
