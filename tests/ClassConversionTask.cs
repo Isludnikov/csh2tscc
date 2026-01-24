@@ -1,4 +1,4 @@
-﻿using System.Collections.Frozen;
+using System.Collections.Frozen;
 using tests.DTO;
 
 namespace tests;
@@ -8,7 +8,8 @@ public class ClassConversionTask
     public required Type Klass;
     public FrozenSet<string> ShouldContain = [];
     public FrozenSet<string> ShouldNotContain = [];
-    internal static IEnumerable<ClassConversionTask> GetFixtures()
+
+    public static IEnumerable<TheoryDataRow<ClassConversionTask>> GetFixtures()
     {
         yield return new ClassConversionTask
         {

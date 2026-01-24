@@ -22,4 +22,5 @@ public class TypesGeneratorParameters
     public bool CleanOutputDirectory { get; init; }
     public required string OutputDirectory { get; init; }
     public bool Verbose { get; init; }
+    public bool UnknownTypesToString { get; init; }
 }

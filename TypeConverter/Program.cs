@@ -39,7 +39,8 @@ internal class Program
             NoSerializationAttributes = opts.ForbidSerializationAttributes.ToFrozenSet(),
             CustomMap = opts.CustomMap.SplitToDictionary("--customMap"),
             SerializationNamingAttributes = opts.SerializationNaming.SplitToDictionary("--serializationNaming"),
-            Verbose = opts.Verbose
+            Verbose = opts.Verbose,
+            UnknownTypesToString = opts.UnknownTypeToString
         };
     }
 

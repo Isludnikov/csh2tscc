@@ -5,15 +5,15 @@ using System.Text.Json.Serialization;
 
 namespace tests;
 
-public class TypesGeneratorIntegrationTests
+public class TypesGeneratorIntegrationTests(ITestOutputHelper testOutputHelper)
 {
-    [Test]
-    [TestCase("")]
-    [TestCase(".Generics.SimpleGenerics")]
-    [TestCase(".Generics.Enumerable")]
-    [TestCase(".Generics.MultiGenerics")]
-    [TestCase(".Required")]
-    [TestCase(".Nullability")]
+    [Theory]
+    [InlineData("")]
+    [InlineData(".Generics.SimpleGenerics")]
+    [InlineData(".Generics.Enumerable")]
+    [InlineData(".Generics.MultiGenerics")]
+    [InlineData(".Required")]
+    [InlineData(".Nullability")]
     public void TestDryGeneration(string subpath)
     {
         var config = new TypesGeneratorParameters
@@ -31,13 +31,13 @@ public class TypesGeneratorIntegrationTests
         var types = generator.TransformTypes();
         foreach (var type in types)
         {
-            Console.WriteLine(type.Key);
-            Console.WriteLine(type.Value);
-            Console.WriteLine("=====================================================");
+            testOutputHelper.WriteLine(type.Key);
+            testOutputHelper.WriteLine(type.Value);
+            testOutputHelper.WriteLine("=====================================================");
         }
     }
 
-    [Test]
+    [Fact]
     public void FullTest()
     {
         var generator = new TypesGenerator(new TypesGeneratorParameters
@@ -69,9 +69,8 @@ public class TypesGeneratorIntegrationTests
         {
             File.WriteAllText($"{generator.Config.OutputDirectory}/{tsClass.Key}", tsClass.Value);
             ++count;
-            Console.WriteLine($"File [{tsClass.Key}] created");
+            testOutputHelper.WriteLine($"File [{tsClass.Key}] created");
         }
-
-        Console.WriteLine($"[{count}] file(s) generated");
+        testOutputHelper.WriteLine($"[{count}] file(s) generated");
     }
 }

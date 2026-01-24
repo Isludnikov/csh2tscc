@@ -41,4 +41,6 @@ public class Options
 
     [Option('v', "verbose", Required = false, Default = false, HelpText = "Verbose output")]
     public bool Verbose { get; set; }
+    [Option("unknown2string", Required = false, Default = false, HelpText = "Map unknown type to string")]
+    public bool UnknownTypeToString { get; set; }
 }

@@ -2,7 +2,7 @@
   "profiles": {
     "TypeConverter": {
       "commandName": "Project",
-      "commandLineArgs": "-o \"./generated\" -l \"../../../../../sm.infrastructure/src/Libraries/Sm.Common/bin/debug/net9.0/Sm.Common.dll\" \"../../../../../sm.infrastructure/src/Applications/Sm.Server/bin/debug/net9.0-windows/Sm.Server.dll\" -n \"Sm.Common.DTO\" \"Sm.Common.Deploy\" \"Sm.Server.Extensions.Deploy.CD.DTO\" -e \"Sm.Common.DTO.Extensions\" -f \"JsonIgnoreAttribute\" \"NoSerializeAttribute\" -s \"JsonStringEnumMemberNameAttribute;Name\" \"CustomNameAttribute;CustomName\" \"EnumMemberAttribute;Value\" --cleanoutputdirectory --camelcase"
+      "commandLineArgs": "-o \"./generated\" -l \"../../../../../sm.infrastructure/src/Libraries/Sm.Common/bin/debug/net9.0/Sm.Common.dll\" \"../../../../../sm.infrastructure/src/Applications/Sm.Server/bin/debug/net9.0-windows/Sm.Server.dll\" -n \"Sm.Common.DTO\" \"Sm.Common.Deploy\" \"Sm.Server.Extensions.Deploy.CD.DTO\" -e \"Sm.Common.DTO.Extensions\" -f \"JsonIgnoreAttribute\" \"NoSerializeAttribute\" -s \"JsonStringEnumMemberNameAttribute;Name\" \"CustomNameAttribute;CustomName\" \"EnumMemberAttribute;Value\" --cleanoutputdirectory --camelcase --unknown2string"
     }
   }
 }

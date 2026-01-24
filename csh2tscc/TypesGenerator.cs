@@ -413,8 +413,9 @@ public class TypesGenerator(TypesGeneratorParameters parameters)
         {
             return CommonHelper.GetPropertyTypeWithNullable(NormalizeClassName(GetTypeScriptName(propertyType)), nullable);
         }
-
-        throw new UnsupportedTypeException(propertyType);
+        return Config.UnknownTypesToString ?
+            TypeScriptConstants.StringType :
+            throw new UnsupportedTypeException(propertyType);
     }
 
     private BooleanContainer GetNullableContainer(PropertyTypeExtractionContext context) =>
