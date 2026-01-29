@@ -14,7 +14,8 @@ public class TypesGeneratorIntegrationTests(ITestOutputHelper testOutputHelper)
     [InlineData(".Generics.MultiGenerics")]
     [InlineData(".Required")]
     [InlineData(".Nullability")]
-    public void TestDryGeneration(string subpath)
+    [InlineData(".NonExisting", "ExportTestAttribute")]
+    public void TestDryGeneration(string subpath, string? exportAttribute = null)
     {
         var config = new TypesGeneratorParameters
         {
@@ -24,7 +25,9 @@ public class TypesGeneratorIntegrationTests(ITestOutputHelper testOutputHelper)
             RootNamespacesExcluded = ["Dto.Integration.Tests.DTO.Extensions"],
             SerializationNamingAttributes = new Dictionary<string, string> { { nameof(JsonStringEnumMemberNameAttribute), "Name" }, { nameof(CustomNameAttribute), "CustomName" } }.ToFrozenDictionary(),
             NoSerializationAttributes = [nameof(JsonIgnoreAttribute), nameof(NoSerializeAttribute)],
+            ExportAttributes = exportAttribute == null ? [] : [exportAttribute],
             OutputDirectory = "",
+            UnknownTypesToString = true,
             Verbose = true
         };
         var generator = new TypesGenerator(config);

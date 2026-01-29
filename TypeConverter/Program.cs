@@ -40,8 +40,14 @@ internal class Program
             CustomMap = opts.CustomMap.SplitToDictionary("--customMap"),
             SerializationNamingAttributes = opts.SerializationNaming.SplitToDictionary("--serializationNaming"),
             Verbose = opts.Verbose,
-            UnknownTypesToString = opts.UnknownTypeToString
+            UnknownTypesToString = opts.UnknownTypeToString,
+            ExportAttributes = opts.ExportAttributes.ToFrozenSet(),
         };
+        if (_typesGeneratorParameters.RootNamespaces.Count == 0 &&
+            _typesGeneratorParameters.ExportAttributes.Count == 0)
+        {
+            throw new ArgumentException("Root namespaces and export attributes must not be empty simultaneously");
+        }
     }
 
     private static void HandleParseError(IEnumerable<Error> errs)

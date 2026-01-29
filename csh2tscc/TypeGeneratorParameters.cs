@@ -23,4 +23,5 @@ public class TypesGeneratorParameters
     public required string OutputDirectory { get; init; }
     public bool Verbose { get; init; }
     public bool UnknownTypesToString { get; init; }
+    public FrozenSet<string> ExportAttributes { get; init; } = [];
 }

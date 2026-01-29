@@ -10,8 +10,10 @@ public class Options
     [Option('l', "libraries", Required = true, HelpText = "Libraries files to be processed")]
     public IEnumerable<string> Libraries { get; set; }
 
-    [Option('n', "namespaces", Required = true, HelpText = "Namespaces to be processed")]
+    [Option('n', "namespaces", Required = false, HelpText = "Namespaces to be processed")]
     public IEnumerable<string> Namespaces { get; set; }
+    [Option('a', "exportAttributes", Required = false, HelpText = "Export attributes")]
+    public IEnumerable<string> ExportAttributes { get; set; }
 
     [Option('e', "namespacesExcluded", Required = false, HelpText = "Namespaces to be excluded")]
     public IEnumerable<string> NamespacesExcluded { get; set; } = [];

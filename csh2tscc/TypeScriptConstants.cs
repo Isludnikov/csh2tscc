@@ -39,8 +39,7 @@ public static class TypeScriptConstants
     public const char GenericAritySeparator = '`';
 
     //File footer
-    public const string Name = "C# to TypeScript class converter";
-    public const string Version = "version 1.0.0";
+    public const string Name = "C# to TypeScript class converter v1.0.1";
 }
 
 /// <summary>
