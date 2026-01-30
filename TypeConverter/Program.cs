@@ -7,26 +7,21 @@ namespace TypeConverter;
 
 internal class Program
 {
-    private static bool _hasErrors;
-    private static TypesGeneratorParameters? _typesGeneratorParameters;
-
-    private static int Main(string[] args)
+    private static void Main(string[] args)
     {
         Parser.Default.ParseArguments<Options>(args)
             .WithParsed(RunOptions)
             .WithNotParsed(HandleParseError);
-        if (_hasErrors)
-        {
-            return -1;
-        }
-
-        Executor.Executor.Execute(_typesGeneratorParameters ?? throw new Exception("config is empty"));
-        return 0;
     }
 
     private static void RunOptions(Options opts)
     {
-        _typesGeneratorParameters = new TypesGeneratorParameters
+        if (!opts.Namespaces.Any() && !opts.ExportAttributes.Any())
+        {
+            throw new ArgumentException("Root namespaces and export attributes must not be empty simultaneously");
+        }
+
+        Executor.Executor.Execute(new TypesGeneratorParameters
         {
             CamelCaseProperties = opts.CamelCase,
             CleanOutputDirectory = opts.CleanOutputDirectory,
@@ -42,17 +37,11 @@ internal class Program
             Verbose = opts.Verbose,
             UnknownTypesToString = opts.UnknownTypeToString,
             ExportAttributes = opts.ExportAttributes.ToFrozenSet(),
-        };
-        if (_typesGeneratorParameters.RootNamespaces.Count == 0 &&
-            _typesGeneratorParameters.ExportAttributes.Count == 0)
-        {
-            throw new ArgumentException("Root namespaces and export attributes must not be empty simultaneously");
-        }
+        });
     }
 
     private static void HandleParseError(IEnumerable<Error> errs)
     {
-        _hasErrors = true;
-        Console.WriteLine("Execution terminated");
+        Environment.ExitCode = -1;
     }
 }

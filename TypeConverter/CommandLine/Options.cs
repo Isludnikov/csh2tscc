@@ -37,7 +37,7 @@ public class Options
         HelpText = "Dictionary for custom mapping. Example \"BadConstructedClass;Map<string, unknown>\"")]
     public IEnumerable<string> CustomMap { get; set; } = [];
 
-    [Option('s', "serializationNaming", Required = true,
+    [Option('s', "serializationNaming", Required = false,
         HelpText = "Dictionary for serialization naming. Example \"JsonPropertyNameAttribute;Name\"")]
     public IEnumerable<string> SerializationNaming { get; set; } = [];
 

@@ -5,6 +5,15 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	  <Version>1.0.1</Version>
+	  <AssemblyVersion>1.0.1.*</AssemblyVersion>
+	  <InformationalVersion>1.0.1</InformationalVersion>
+	  <FileVersion>1.0.1.0</FileVersion>
+	  <Product>Type converter</Product>
+	  <AssemblyTitle>Type converter</AssemblyTitle>
+	  <Deterministic>false</Deterministic>
+	  <Copyright>Copyright © 2026 Iokhanaan</Copyright>
+	  <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -14,6 +23,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DebugType>none</DebugType>
 	  <DebugSymbols>false</DebugSymbols>
+	  <InvariantGlobalization>true</InvariantGlobalization>
+	  <DebuggerSupport>false</DebuggerSupport>
+	  <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
+	  <EventSourceSupport>false</EventSourceSupport>
+	  <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+	  <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+	  <Optimize>true</Optimize>
   </PropertyGroup>
 
   <ItemGroup>

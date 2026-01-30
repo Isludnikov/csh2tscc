@@ -4,6 +4,12 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	  <Version>1.0.1</Version>
+	  <AssemblyVersion>1.0.1.*</AssemblyVersion>
+	  <FileVersion>1.0.1.0</FileVersion>
+	  <Deterministic>false</Deterministic>
+	  <AssemblyTitle>C# to TypeScript class converter</AssemblyTitle>
+	  <Copyright>Copyright © 2026 Iokhanaan</Copyright>
   </PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<DebugType>none</DebugType>

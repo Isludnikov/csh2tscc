@@ -37,9 +37,6 @@ public static class TypeScriptConstants
 
     // Generic type name separator (backtick followed by arity number)
     public const char GenericAritySeparator = '`';
-
-    //File footer
-    public const string Name = "C# to TypeScript class converter v1.0.1";
 }
 
 /// <summary>
