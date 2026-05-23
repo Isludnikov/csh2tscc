@@ -42,6 +42,7 @@ internal class Program
 
     private static void HandleParseError(IEnumerable<Error> errs)
     {
+        Console.Error.WriteLine("Failed to parse command-line arguments.");
         Environment.ExitCode = -1;
     }
 }

@@ -26,7 +26,11 @@ public class CustomAssemblyLoadContext(IEnumerable<string> basePath) : AssemblyL
         {
             return Default.LoadFromAssemblyName(assemblyName);
         }
-        catch
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+        catch (FileLoadException)
         {
             return null;
         }

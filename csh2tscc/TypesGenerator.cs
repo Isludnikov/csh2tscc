@@ -19,7 +19,7 @@ public class TypesGenerator
 
     public Dictionary<string, string> TransformTypes() =>
         _discovery.GetTypes().ToDictionary(
-            typeToWrite => TypeNameHelper.NormalizeClassName(TypeNameHelper.GetTypeScriptName(typeToWrite, _parameters.UseFullNames)) + ".tsx",
+            typeToWrite => TypeNameHelper.NormalizeClassName(TypeNameHelper.GetTypeScriptName(typeToWrite, _parameters.UseFullNames)) + _parameters.FileExtension,
             _builder.BuildFileFromType);
 
     internal string BuildFileFromType(Type typeToWrite) => _builder.BuildFileFromType(typeToWrite);

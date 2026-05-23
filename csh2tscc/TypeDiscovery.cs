@@ -6,10 +6,10 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
     {
         var types = new List<Type>();
         var filePaths = parameters.LibraryFileNames.Select(x => Path.GetDirectoryName(Path.GetFullPath(x))).ToList();
+        var context = new CustomAssemblyLoadContext(filePaths);
         foreach (var param in parameters.LibraryFileNames)
         {
             var exactPath = Path.GetFullPath(param);
-            var context = new CustomAssemblyLoadContext(filePaths);
             var assembly = context.LoadAssembly(exactPath);
             types.AddRange(assembly.GetExportedTypes().Where(IsExportableType));
         }
@@ -120,7 +120,7 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
 
     private bool IsInExcludedNamespace(Type type) =>
         !string.IsNullOrWhiteSpace(type.FullName) &&
-        parameters.RootNamespacesExcluded.Any(excluded => type.FullName.Contains(excluded));
+        parameters.RootNamespacesExcluded.Any(excluded => type.FullName.StartsWith(excluded));
 
     private static bool IsCollectionType(Type type)
     {

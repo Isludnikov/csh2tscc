@@ -80,5 +80,21 @@ public class ClassConversionTask
                 "description?: string | null;"
             ]
         };
+        yield return new ClassConversionTask
+        {
+            Klass = typeof(CollectionsDto),
+            ShouldContain = [
+                "export interface CollectionsDto",
+                "numbers: number[];",
+                "names: string[];",
+                "intList: number[];",
+                "stringEnumerable: string[];",
+                "intSet: number[];"
+            ],
+            ShouldNotContain = [
+                "number[] | null",
+                "string[] | null"
+            ]
+        };
     }
 }

@@ -25,7 +25,8 @@ internal class StringBuilderCustom(bool verbose)
     }
     public void AppendLine(char chr)
     {
-        _sb.AppendLine(chr + Environment.NewLine);
+        _sb.Append(chr);
+        _sb.AppendLine();
     }
 
     public override string ToString() => _sb.ToString();

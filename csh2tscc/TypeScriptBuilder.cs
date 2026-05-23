@@ -184,5 +184,6 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
         return new AttributeProcessingResult(name, isBlocked);
     }
 
-    private string GetClassPropertyNameToWrite(string s) => parameters.CamelCaseProperties ? char.ToLowerInvariant(s[0]) + s[1..] : s;
+    private string GetClassPropertyNameToWrite(string s) =>
+        parameters.CamelCaseProperties && s.Length > 0 ? char.ToLowerInvariant(s[0]) + s[1..] : s;
 }

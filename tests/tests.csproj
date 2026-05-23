@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
+		<TargetFramework>net9.0-windows</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<OutputType>Exe</OutputType>
@@ -23,6 +23,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\csh2tscc\csh2tscc.csproj" />
 		<ProjectReference Include="..\Dto.Integration.Tests\Dto.Integration.Tests.csproj" />
+		<ProjectReference Include="..\TypeConverter\TypeConverter.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
