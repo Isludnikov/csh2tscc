@@ -45,6 +45,16 @@ public class TypeDiscoveryTests
     }
 
     [Fact]
+    public void ListAffectedTypes_GlobalNamespaceType_IsExcluded()
+    {
+        // GlobalProbeHostDto.Probe is a global-namespace type (Namespace == null); ShouldIncludeType
+        // must drop it rather than emit an import with no module path.
+        var affected = Discovery().ListAffectedTypes(typeof(GlobalProbeHostDto));
+
+        Assert.DoesNotContain(affected, t => t == typeof(GlobalNamespaceProbe));
+    }
+
+    [Fact]
     public void GetTypes_LoadsExportedTypesFromAssembly_AndAppliesNamespaceFilters()
     {
         // Exercises the full assembly-loading + IsExportableType pipeline against the on-disk

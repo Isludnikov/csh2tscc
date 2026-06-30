@@ -5,16 +5,19 @@ using TypeConverter.CommandLine;
 
 namespace TypeConverter;
 
-internal class Program
+internal static class Program
 {
-    private static void Main(string[] args)
-    {
-        Parser.Default.ParseArguments<Options>(args)
+    private static void Main(string[] args) => Run(args);
+
+    /// <summary>
+    /// Parses <paramref name="args"/> and dispatches to the generation pipeline. Extracted from
+    /// <c>Main</c> so the argument-handling wiring can be unit-tested without launching the process.
+    /// </summary>
+    internal static void Run(string[] args) => Parser.Default.ParseArguments<Options>(args)
             .WithParsed(RunOptions)
             .WithNotParsed(HandleParseError);
-    }
 
-    private static void RunOptions(Options opts)
+    internal static void RunOptions(Options opts)
     {
         opts.Validate();
 
@@ -29,15 +32,15 @@ internal class Program
             RootNamespacesExcluded = opts.NamespacesExcluded.ToFrozenSet(),
             UseFullNames = opts.UseFullNames,
             NoSerializationAttributes = opts.ForbidSerializationAttributes.ToFrozenSet(),
-            CustomMap = opts.CustomMap.SplitToDictionary("--customMap"),
-            SerializationNamingAttributes = opts.SerializationNaming.SplitToDictionary("--serializationNaming"),
+            CustomMap = opts.CustomMap.SplitToDictionary($"--{Options.CustomMapOption}"),
+            SerializationNamingAttributes = opts.SerializationNaming.SplitToDictionary($"--{Options.SerializationNamingOption}"),
             Verbose = opts.Verbose,
             UnknownTypesToString = opts.UnknownTypeToString,
             ExportAttributes = opts.ExportAttributes.ToFrozenSet(),
         });
     }
 
-    private static void HandleParseError(IEnumerable<Error> errs)
+    internal static void HandleParseError(IEnumerable<Error> errs)
     {
         Console.Error.WriteLine("Failed to parse command-line arguments.");
         Environment.ExitCode = -1;

@@ -4,6 +4,14 @@ namespace TypeConverter.CommandLine;
 
 public class Options
 {
+    /// <summary>
+    /// Long names of options whose identifier is also referenced outside the <see cref="OptionAttribute"/>
+    /// (the dictionary-valued options pass their name to <see cref="DictionaryHelper.SplitToDictionary"/>
+    /// for error messages). Kept as constants so each CLI name has a single source of truth.
+    /// </summary>
+    public const string CustomMapOption = "customMap";
+    public const string SerializationNamingOption = "serializationNaming";
+
     [Option('o', "out", Required = true, HelpText = "OutputDirectory")]
     public string OutputDirectory { get; set; }
 
@@ -33,11 +41,11 @@ public class Options
     [Option(Default = false, HelpText = "use full names")]
     public bool UseFullNames { get; set; }
 
-    [Option('c', "customMap", Required = false,
+    [Option('c', CustomMapOption, Required = false,
         HelpText = "Dictionary for custom mapping. Example \"BadConstructedClass;Map<string, unknown>\"")]
     public IEnumerable<string> CustomMap { get; set; } = [];
 
-    [Option('s', "serializationNaming", Required = false,
+    [Option('s', SerializationNamingOption, Required = false,
         HelpText = "Dictionary for serialization naming. Example \"JsonPropertyNameAttribute;Name\"")]
     public IEnumerable<string> SerializationNaming { get; set; } = [];
 

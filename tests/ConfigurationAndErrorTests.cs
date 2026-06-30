@@ -1,4 +1,5 @@
 using csh2tscc;
+using Dto.Integration.Tests.DTO.Extensions;
 using tests.DTO;
 using tests.TestSupport;
 
@@ -91,6 +92,18 @@ public class ConfigurationAndErrorTests
         var ex = Assert.Throws<InvalidSerializationConfigException>(() =>
             ParametersBuilder.ForLocalDto().BuildGenerator().BuildFileFromType(typeof(DuplicateNamingDto)));
         Assert.Contains("more than one serialization naming attribute", ex.Message);
+    }
+
+    // === Error path: AttributeProcessingException (naming attribute resolves to null) ===
+
+    [Fact]
+    public void NamingAttribute_WithNullName_ThrowsAttributeProcessingException()
+    {
+        var ex = Assert.Throws<AttributeProcessingException>(() =>
+            ParametersBuilder.ForLocalDto().BuildGenerator().BuildFileFromType(typeof(NullNameDto)));
+
+        Assert.Contains("is null", ex.Message);
+        Assert.Equal(nameof(CustomNameAttribute), ex.AttributeName);
     }
 
     // === Fix 3: ExcludedNamespace uses StartsWith (not Contains) ===
