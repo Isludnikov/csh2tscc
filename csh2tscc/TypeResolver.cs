@@ -154,8 +154,11 @@ internal class TypeResolver(TypesGeneratorParameters parameters)
             return null;
         }
 
+        // For nested generic types, GetGenericArguments() returns the declaring (outer)
+        // type's parameters first, followed by the nested type's own parameters. Take the
+        // LAST localCount arguments so we select the locally-declared ones, not the outer ones.
         var localGenericArguments = propertyType.GetGenericArguments()
-            .Take(GenericHelper.LocalGenericParameterCount(propertyType))
+            .TakeLast(GenericHelper.LocalGenericParameterCount(propertyType))
             .ToArray();
 
         var typeArgs = localGenericArguments

@@ -50,4 +50,26 @@ public class TypeNameHelperTests
         var result = TypeNameHelper.GetTypeScriptName(typeof(List<int>).GetGenericTypeDefinition(), useFullNames: true);
         Assert.StartsWith("System_Collections_Generic_List`", result);
     }
+
+    [Fact]
+    public void ToCamelCase_Disabled_ReturnsInputUnchanged()
+    {
+        Assert.Equal("Name", TypeNameHelper.ToCamelCase("Name", camelCase: false));
+    }
+
+    [Theory]
+    [InlineData("Name", "name")]
+    [InlineData("X", "x")]
+    [InlineData("ID", "iD")]
+    public void ToCamelCase_Enabled_LowersFirstChar(string input, string expected)
+    {
+        Assert.Equal(expected, TypeNameHelper.ToCamelCase(input, camelCase: true));
+    }
+
+    [Fact]
+    public void ToCamelCase_EmptyString_DoesNotThrow()
+    {
+        // Guards the s.Length > 0 check — previously verified via reflection on a private method.
+        Assert.Equal(string.Empty, TypeNameHelper.ToCamelCase(string.Empty, camelCase: true));
+    }
 }

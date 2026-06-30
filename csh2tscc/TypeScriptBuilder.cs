@@ -73,7 +73,7 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
 
         foreach (var property in properties)
         {
-            var defaultName = GetClassPropertyNameToWrite(property.Name);
+            var defaultName = TypeNameHelper.ToCamelCase(property.Name, parameters.CamelCaseProperties);
             sb.AppendDebugLine($"Default field name [{defaultName}]");
             var attributes = property.GetCustomAttributes().ToList();
             var result = ProcessMemberAttributes(attributes, defaultName, typeToWrite, sb, throwOnNullName: true);
@@ -183,7 +183,4 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
 
         return new AttributeProcessingResult(name, isBlocked);
     }
-
-    private string GetClassPropertyNameToWrite(string s) =>
-        parameters.CamelCaseProperties && s.Length > 0 ? char.ToLowerInvariant(s[0]) + s[1..] : s;
 }

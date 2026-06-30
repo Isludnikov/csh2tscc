@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Code-coverage settings for code-coverage collection via "dotnet test". See AGENTS/README notes.
+  Produces a Cobertura report under TestResults/. The test assembly and the DTO test data
+  assembly are excluded so metrics reflect the production code (csh2tscc + TypeConverter) only.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Exclude>[tests]*,[Dto.Integration.Tests]*</Exclude>
+          <ExcludeByAttribute>CompilerGeneratedAttribute,GeneratedCodeAttribute</ExcludeByAttribute>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

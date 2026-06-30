@@ -82,6 +82,20 @@ public class ClassConversionTask
         };
         yield return new ClassConversionTask
         {
+            // The property is OuterContainer<int>.InnerContainer<string>. The locally-declared
+            // generic argument is the inner one (string), so the emitted type must be
+            // InnerContainer<string>, NOT InnerContainer<number> (the outer arg).
+            Klass = typeof(UseNestedGeneric),
+            ShouldContain = [
+                "export interface UseNestedGeneric",
+                "nested: InnerContainer<string>;"
+            ],
+            ShouldNotContain = [
+                "InnerContainer<number>"
+            ]
+        };
+        yield return new ClassConversionTask
+        {
             Klass = typeof(CollectionsDto),
             ShouldContain = [
                 "export interface CollectionsDto",
@@ -94,6 +108,54 @@ public class ClassConversionTask
             ShouldNotContain = [
                 "number[] | null",
                 "string[] | null"
+            ]
+        };
+        yield return new ClassConversionTask
+        {
+            Klass = typeof(ToStringTypesDto),
+            ShouldContain = [
+                "export interface ToStringTypesDto",
+                "id: string;",        // Guid
+                "created: string;",   // DateTime
+                "link: string;",      // Uri
+                "duration: string;"   // TimeSpan
+            ]
+        };
+        yield return new ClassConversionTask
+        {
+            Klass = typeof(ObjectPropertyDto),
+            ShouldContain = [
+                "export interface ObjectPropertyDto",
+                "payload: unknown;"
+            ]
+        };
+        yield return new ClassConversionTask
+        {
+            Klass = typeof(ArrayOfComplexDto),
+            ShouldContain = [
+                "import { SimpleObject }",
+                "export interface ArrayOfComplexDto",
+                "items: SimpleObject[];"
+            ]
+        };
+        yield return new ClassConversionTask
+        {
+            Klass = typeof(InterfaceDictionaryDto),
+            ShouldContain = [
+                "export interface InterfaceDictionaryDto",
+                "map: Map<string, number>;"
+            ]
+        };
+        yield return new ClassConversionTask
+        {
+            Klass = typeof(IgnoredEnum),
+            ShouldContain = [
+                "export enum IgnoredEnum",
+                "Visible = 'Visible',",
+                "Renamed = 'renamed',"
+            ],
+            ShouldNotContain = [
+                "Hidden"
             ]
         };
     }

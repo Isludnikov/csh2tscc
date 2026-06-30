@@ -1,31 +1,11 @@
 using csh2tscc;
-using Dto.Integration.Tests.DTO.Extensions;
-using System.Collections.Frozen;
-using System.Reflection;
-using System.Text.Json.Serialization;
 using tests.DTO;
+using tests.TestSupport;
 
 namespace tests;
 
 public class ConfigurationAndErrorTests
 {
-    private static TypesGeneratorParameters BaseConfig() => new()
-    {
-        CamelCaseProperties = true,
-        LibraryFileNames = [],
-        RootNamespaces = ["tests.DTO"],
-        RootNamespacesExcluded = ["tests.DTO.Extensions"],
-        SerializationNamingAttributes = new Dictionary<string, string>
-        {
-            { nameof(JsonStringEnumMemberNameAttribute), "Name" },
-            { nameof(CustomNameAttribute), "CustomName" },
-            { nameof(JsonPropertyNameAttribute), "Name" }
-        }.ToFrozenDictionary(),
-        NoSerializationAttributes = [nameof(JsonIgnoreAttribute), nameof(NoSerializeAttribute)],
-        OutputDirectory = "",
-        Verbose = false
-    };
-
     // === Fix 1: FileExtension is respected ===
 
     [Theory]
@@ -34,24 +14,11 @@ public class ConfigurationAndErrorTests
     [InlineData(".tsx")]
     public void TransformTypes_UsesConfiguredFileExtension(string extension)
     {
-        var config = new TypesGeneratorParameters
-        {
-            CamelCaseProperties = true,
-            LibraryFileNames = ["Dto.Integration.Tests.dll"],
-            RootNamespaces = ["Dto.Integration.Tests.DTO"],
-            RootNamespacesExcluded = ["Dto.Integration.Tests.DTO.Extensions"],
-            SerializationNamingAttributes = new Dictionary<string, string>
-            {
-                { nameof(JsonStringEnumMemberNameAttribute), "Name" },
-                { nameof(CustomNameAttribute), "CustomName" }
-            }.ToFrozenDictionary(),
-            NoSerializationAttributes = [nameof(JsonIgnoreAttribute), nameof(NoSerializeAttribute)],
-            OutputDirectory = "",
-            UnknownTypesToString = true,
-            FileExtension = extension
-        };
-
-        var files = new TypesGenerator(config).TransformTypes();
+        var files = ParametersBuilder.ForIntegrationDll()
+            .WithUnknownTypesToString()
+            .WithFileExtension(extension)
+            .BuildGenerator()
+            .TransformTypes();
 
         Assert.NotEmpty(files);
         Assert.All(files, kv => Assert.EndsWith(extension, kv.Key));
@@ -62,7 +29,7 @@ public class ConfigurationAndErrorTests
     [Fact]
     public void BuildFileFromType_OutputDoesNotEndWithDoubleNewline()
     {
-        var ts = TypesGenerator.Create(BaseConfig()).BuildFileFromType(typeof(SimpleObject));
+        var ts = ParametersBuilder.ForLocalDto().BuildGenerator().BuildFileFromType(typeof(SimpleObject));
         Assert.False(ts.EndsWith(Environment.NewLine + Environment.NewLine),
             "Generated TypeScript should not end with a blank line.");
         Assert.EndsWith("}" + Environment.NewLine, ts);
@@ -73,19 +40,10 @@ public class ConfigurationAndErrorTests
     [Fact]
     public void CustomMap_ByShortName_OverridesGeneratedType()
     {
-        var config = BaseConfig();
-        var configWithMap = new TypesGeneratorParameters
-        {
-            CamelCaseProperties = config.CamelCaseProperties,
-            LibraryFileNames = config.LibraryFileNames,
-            RootNamespaces = config.RootNamespaces,
-            RootNamespacesExcluded = config.RootNamespacesExcluded,
-            SerializationNamingAttributes = config.SerializationNamingAttributes,
-            NoSerializationAttributes = config.NoSerializationAttributes,
-            OutputDirectory = config.OutputDirectory,
-            CustomMap = new Dictionary<string, string> { { "SimpleObject", "MyTsType" } }.ToFrozenDictionary()
-        };
-        var ts = TypesGenerator.Create(configWithMap).BuildFileFromType(typeof(CustomMappedDto));
+        var ts = ParametersBuilder.ForLocalDto()
+            .WithCustomMap(("SimpleObject", "MyTsType"))
+            .BuildGenerator()
+            .BuildFileFromType(typeof(CustomMappedDto));
 
         Assert.Contains("mapped: MyTsType", ts);
         Assert.DoesNotContain("mapped: SimpleObject", ts);
@@ -97,20 +55,10 @@ public class ConfigurationAndErrorTests
     [Fact]
     public void UseFullNames_True_ProducesUnderscoreSeparatedNames()
     {
-        var config = BaseConfig();
-        var fullNameConfig = new TypesGeneratorParameters
-        {
-            CamelCaseProperties = config.CamelCaseProperties,
-            LibraryFileNames = config.LibraryFileNames,
-            RootNamespaces = config.RootNamespaces,
-            RootNamespacesExcluded = config.RootNamespacesExcluded,
-            SerializationNamingAttributes = config.SerializationNamingAttributes,
-            NoSerializationAttributes = config.NoSerializationAttributes,
-            OutputDirectory = config.OutputDirectory,
-            UseFullNames = true
-        };
-
-        var ts = TypesGenerator.Create(fullNameConfig).BuildFileFromType(typeof(SimpleObject));
+        var ts = ParametersBuilder.ForLocalDto()
+            .WithUseFullNames()
+            .BuildGenerator()
+            .BuildFileFromType(typeof(SimpleObject));
 
         Assert.Contains("export interface tests_DTO_SimpleObject", ts);
     }
@@ -120,27 +68,17 @@ public class ConfigurationAndErrorTests
     [Fact]
     public void UnknownTypesToString_False_ThrowsForUnsupportedType()
     {
-        var config = BaseConfig();
         Assert.Throws<UnsupportedTypeException>(() =>
-            TypesGenerator.Create(config).BuildFileFromType(typeof(UnknownTypeDto)));
+            ParametersBuilder.ForLocalDto().BuildGenerator().BuildFileFromType(typeof(UnknownTypeDto)));
     }
 
     [Fact]
     public void UnknownTypesToString_True_MapsUnsupportedToString()
     {
-        var config = BaseConfig();
-        var withUnknown = new TypesGeneratorParameters
-        {
-            CamelCaseProperties = config.CamelCaseProperties,
-            LibraryFileNames = config.LibraryFileNames,
-            RootNamespaces = config.RootNamespaces,
-            RootNamespacesExcluded = config.RootNamespacesExcluded,
-            SerializationNamingAttributes = config.SerializationNamingAttributes,
-            NoSerializationAttributes = config.NoSerializationAttributes,
-            OutputDirectory = config.OutputDirectory,
-            UnknownTypesToString = true
-        };
-        var ts = TypesGenerator.Create(withUnknown).BuildFileFromType(typeof(UnknownTypeDto));
+        var ts = ParametersBuilder.ForLocalDto()
+            .WithUnknownTypesToString()
+            .BuildGenerator()
+            .BuildFileFromType(typeof(UnknownTypeDto));
 
         Assert.Contains("unsupportedField: string", ts);
     }
@@ -151,7 +89,7 @@ public class ConfigurationAndErrorTests
     public void DuplicateNamingAttributes_OnOneProperty_Throws()
     {
         var ex = Assert.Throws<InvalidSerializationConfigException>(() =>
-            TypesGenerator.Create(BaseConfig()).BuildFileFromType(typeof(DuplicateNamingDto)));
+            ParametersBuilder.ForLocalDto().BuildGenerator().BuildFileFromType(typeof(DuplicateNamingDto)));
         Assert.Contains("more than one serialization naming attribute", ex.Message);
     }
 
@@ -165,41 +103,13 @@ public class ConfigurationAndErrorTests
         // been wrongly filtered out of ComplexType's affected types — and the import statement
         // for it would be missing. Under the StartsWith-based check, the substring does not
         // match the prefix, so SimpleGenericType remains in affected types and is imported.
-        var config = new TypesGeneratorParameters
-        {
-            CamelCaseProperties = true,
-            LibraryFileNames = [],
-            RootNamespaces = ["tests.DTO"],
-            RootNamespacesExcluded = ["DTO"], // substring but not a prefix of "tests.DTO.*"
-            SerializationNamingAttributes = new Dictionary<string, string>().ToFrozenDictionary(),
-            NoSerializationAttributes = [],
-            OutputDirectory = ""
-        };
-
-        var ts = TypesGenerator.Create(config).BuildFileFromType(typeof(ComplexType<>));
+        var ts = new ParametersBuilder()
+            .WithCamelCase()
+            .WithRootNamespaces("tests.DTO")
+            .WithRootNamespacesExcluded("DTO") // substring but not a prefix of "tests.DTO.*"
+            .BuildGenerator()
+            .BuildFileFromType(typeof(ComplexType<>));
 
         Assert.Contains("SimpleGenericType", ts);
-    }
-
-    // === Fix 4: single-character (or empty) property name does not crash camelCase ===
-
-    [Fact]
-    public void GetClassPropertyNameToWrite_EmptyString_DoesNotThrow()
-    {
-        // Reach private method via reflection so we test the guard explicitly.
-        var paramsObj = BaseConfig();
-        var builderType = typeof(TypesGenerator).Assembly.GetType("csh2tscc.TypeScriptBuilder")!;
-        var resolverType = typeof(TypesGenerator).Assembly.GetType("csh2tscc.TypeResolver")!;
-        var discoveryType = typeof(TypesGenerator).Assembly.GetType("csh2tscc.TypeDiscovery")!;
-        var resolver = Activator.CreateInstance(resolverType, paramsObj)!;
-        var discovery = Activator.CreateInstance(discoveryType, paramsObj)!;
-        var builder = Activator.CreateInstance(builderType, paramsObj, resolver, discovery)!;
-        var method = builderType.GetMethod("GetClassPropertyNameToWrite", BindingFlags.NonPublic | BindingFlags.Instance)!;
-
-        var resultEmpty = method.Invoke(builder, new object[] { string.Empty });
-        Assert.Equal(string.Empty, resultEmpty);
-
-        var resultSingle = method.Invoke(builder, new object[] { "X" });
-        Assert.Equal("x", resultSingle);
     }
 }

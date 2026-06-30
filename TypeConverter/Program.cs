@@ -16,10 +16,7 @@ internal class Program
 
     private static void RunOptions(Options opts)
     {
-        if (!opts.Namespaces.Any() && !opts.ExportAttributes.Any())
-        {
-            throw new ArgumentException("Root namespaces and export attributes must not be empty simultaneously");
-        }
+        opts.Validate();
 
         Executor.Executor.Execute(new TypesGeneratorParameters
         {

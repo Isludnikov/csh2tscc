@@ -11,9 +11,9 @@ public class Options
     public IEnumerable<string> Libraries { get; set; }
 
     [Option('n', "namespaces", Required = false, HelpText = "Namespaces to be processed")]
-    public IEnumerable<string> Namespaces { get; set; }
+    public IEnumerable<string> Namespaces { get; set; } = [];
     [Option('a', "exportAttributes", Required = false, HelpText = "Export attributes")]
-    public IEnumerable<string> ExportAttributes { get; set; }
+    public IEnumerable<string> ExportAttributes { get; set; } = [];
 
     [Option('e', "namespacesExcluded", Required = false, HelpText = "Namespaces to be excluded")]
     public IEnumerable<string> NamespacesExcluded { get; set; } = [];
@@ -45,4 +45,19 @@ public class Options
     public bool Verbose { get; set; }
     [Option("unknown2string", Required = false, Default = false, HelpText = "Map unknown type to string")]
     public bool UnknownTypeToString { get; set; }
+
+    /// <summary>
+    /// Validates option combinations that the parser cannot express. Extracted from Program so it
+    /// can be unit-tested directly.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown when both namespaces and export attributes are empty — nothing would be selected.
+    /// </exception>
+    public void Validate()
+    {
+        if (!Namespaces.Any() && !ExportAttributes.Any())
+        {
+            throw new ArgumentException("Root namespaces and export attributes must not be empty simultaneously");
+        }
+    }
 }
