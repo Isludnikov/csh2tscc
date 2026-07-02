@@ -104,6 +104,8 @@ public class ConfigurationAndErrorTests
 
         Assert.Contains("is null", ex.Message);
         Assert.Equal(nameof(CustomNameAttribute), ex.AttributeName);
+        Assert.Equal("name", ex.PropertyName); // camelCased default name of NullNameDto.Name
+        Assert.Equal(typeof(NullNameDto), ex.ParentType);
     }
 
     // === Fix 3: ExcludedNamespace uses StartsWith (not Contains) ===

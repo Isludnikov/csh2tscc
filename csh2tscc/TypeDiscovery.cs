@@ -67,17 +67,14 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
 
     private bool ShouldIncludeType(Type type, List<Type> existingTypes)
     {
-        if (type.Namespace == null)
+        // Generic parameters (the T in TreeNode<T>) report the declaring type's namespace
+        // but are placeholders, not importable types.
+        if (type.IsGenericParameter || type.Namespace == null)
         {
             return false;
         }
 
         if (!IncludedType(type.Namespace) && !TypeHasExportAttribute(type))
-        {
-            return false;
-        }
-
-        if (type.GUID == Guid.Empty)
         {
             return false;
         }
@@ -89,7 +86,7 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
 
     private bool ShouldFilterType(Type type) =>
         HasCustomMapping(type) ||
-        IsInExcludedNamespace(type) ||
+        ExcludedType(type.FullName) ||
         IsCollectionType(type);
 
     private bool IsExportableType(Type type) =>
@@ -118,10 +115,6 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
     private static bool IsCompilerGeneratedType(Type type) =>
         type.Name.StartsWith(TypeScriptConstants.CompilerGeneratedTypeIndicator);
 
-    private bool IsInExcludedNamespace(Type type) =>
-        !string.IsNullOrWhiteSpace(type.FullName) &&
-        parameters.RootNamespacesExcluded.Any(excluded => IsWithinNamespace(type.FullName, excluded));
-
     private static bool IsCollectionType(Type type)
     {
         var interfaces = type.GetInterfaces();
@@ -142,7 +135,6 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
     private bool IncludedType(string? needle) => needle != null && parameters.RootNamespaces.Any(ns => IsWithinNamespace(needle, ns));
 
     private bool ExcludedType(string? needle) => needle != null &&
-                                                 parameters.RootNamespacesExcluded.Count != 0 &&
                                                  parameters.RootNamespacesExcluded.Any(ns => IsWithinNamespace(needle, ns));
 
     /// <summary>

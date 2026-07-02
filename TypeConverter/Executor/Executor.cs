@@ -26,7 +26,11 @@ internal static class Executor
     private static void CleanOutputDirectory(string outputDirectory, string fileExtension)
     {
         var directory = new DirectoryInfo(outputDirectory);
-        foreach (var file in directory.EnumerateFiles($"*{fileExtension}"))
+
+        // EnumerateFiles with a three-character extension pattern ("*.tsx") also matches longer
+        // extensions (".tsxbak") — a documented Win32 quirk. Re-check the suffix before deleting.
+        foreach (var file in directory.EnumerateFiles($"*{fileExtension}")
+                     .Where(f => f.Name.EndsWith(fileExtension, StringComparison.OrdinalIgnoreCase)))
         {
             file.Delete();
         }

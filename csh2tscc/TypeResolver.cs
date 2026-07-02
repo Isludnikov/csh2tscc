@@ -107,16 +107,24 @@ internal class TypeResolver(TypesGeneratorParameters parameters)
         return ResolveTypeToTypeScript(elementContext) + TypeScriptConstants.ArraySuffix;
     }
 
+    private static readonly Type[] DictionaryInterfaces = [typeof(IDictionary<,>), typeof(IReadOnlyDictionary<,>)];
+
     private string? TryResolveDictionaryType(PropertyTypeExtractionContext context, Type propertyType, BooleanContainer nullableList)
     {
-        if (!propertyType.InstanceOfGenericInterface(typeof(IDictionary<,>)))
+        // The type is a dictionary if it is (or implements) IDictionary<,> or IReadOnlyDictionary<,>;
+        // the key/value types come from that interface (the type itself may be a non-generic subclass).
+        var dictionaryInterface = DictionaryInterfaces
+            .Select(di => propertyType.InstanceOfGenericType(di)
+                ? propertyType
+                : propertyType.GetInterfaces().FirstOrDefault(x => x.InstanceOfGenericType(di)))
+            .FirstOrDefault(x => x != null);
+
+        if (dictionaryInterface == null)
         {
             return null;
         }
 
-        var genericArguments = propertyType.GetInterfaces()
-            .SingleOrDefault(x => x.InstanceOfGenericInterface(typeof(IDictionary<,>)))
-            ?.GetGenericArguments() ?? propertyType.GetGenericArguments();
+        var genericArguments = dictionaryInterface.GetGenericArguments();
 
         var keyContext = context.CreateDerived(
             genericArguments[0],
@@ -170,7 +178,7 @@ internal class TypeResolver(TypesGeneratorParameters parameters)
                 context.CreateDerived(arg, nullableList, GetNullabilityForGenericArg(arg, nullableList))))
             .Aggregate((a, b) => a + TypeScriptConstants.GenericSeparator + b);
 
-        return $"{TypeNameHelper.NormalizeClassName(TypeNameHelper.GetTypeScriptName(propertyType, parameters.UseFullNames))}{TypeScriptConstants.GenericOpen}{typeArgs}{TypeScriptConstants.GenericClose}";
+        return $"{TypeNameHelper.GetNormalizedTypeScriptName(propertyType, parameters.UseFullNames)}{TypeScriptConstants.GenericOpen}{typeArgs}{TypeScriptConstants.GenericClose}";
     }
 
     private string ResolveComplexType(PropertyTypeExtractionContext context, Type propertyType, bool nullable)
@@ -204,7 +212,7 @@ internal class TypeResolver(TypesGeneratorParameters parameters)
         // Affected types (types that need imports)
         if (IsAffectedOrGenericType(context, propertyType))
         {
-            return CommonHelper.GetPropertyTypeWithNullable(TypeNameHelper.NormalizeClassName(TypeNameHelper.GetTypeScriptName(propertyType, parameters.UseFullNames)), nullable);
+            return CommonHelper.GetPropertyTypeWithNullable(TypeNameHelper.GetNormalizedTypeScriptName(propertyType, parameters.UseFullNames), nullable);
         }
 
         return parameters.UnknownTypesToString ?
@@ -212,17 +220,10 @@ internal class TypeResolver(TypesGeneratorParameters parameters)
             throw new UnsupportedTypeException(propertyType);
     }
 
-    private static bool ResolveNullability(PropertyTypeExtractionContext context)
-    {
-        if (context.SuppressNullable)
-        {
-            return false;
-        }
-
-        return context.PropInfo != null
-            ? IsNullableHelper.IsNullable(context.ClassToWrite, context.PropInfo)
-            : context.IsNullable;
-    }
+    // TypeScriptBuilder computes IsNullable for the root property (via IsNullableHelper) and
+    // CreateDerived carries it for nested type arguments, so the context value is authoritative.
+    private static bool ResolveNullability(PropertyTypeExtractionContext context) =>
+        !context.SuppressNullable && context.IsNullable;
 
     private static Type UnwrapNullableType(Type type) =>
         Nullable.GetUnderlyingType(type) ?? type;

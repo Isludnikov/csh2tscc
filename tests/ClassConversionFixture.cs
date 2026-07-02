@@ -3,15 +3,15 @@ using tests.DTO;
 
 namespace tests;
 
-public class ClassConversionTask
+public class ClassConversionFixture
 {
     public required Type Klass;
     public FrozenSet<string> ShouldContain = [];
     public FrozenSet<string> ShouldNotContain = [];
 
-    public static IEnumerable<TheoryDataRow<ClassConversionTask>> GetFixtures()
+    public static IEnumerable<TheoryDataRow<ClassConversionFixture>> GetFixtures()
     {
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             Klass = typeof(SimpleObject),
             ShouldContain = [
@@ -20,7 +20,7 @@ public class ClassConversionTask
             "nameCustom: string;"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             Klass = typeof(SimpleEnum),
             ShouldContain = [
@@ -28,10 +28,11 @@ public class ClassConversionTask
             "Zero = 'Zero',",
             "One = 'Mia',",
             "Two = '2',",
-            "Three = 'three',"
+            "Three = 'three',",
+            @"Four = 'O\'Brien',"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             Klass = typeof(SimpleGenericType<>),
             ShouldContain = [
@@ -41,17 +42,17 @@ public class ClassConversionTask
                 "data: T;"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             Klass = typeof(MultiGenericType<,>),
             ShouldContain = [
-                "export interface MultiGenericType<T,D>",
+                "export interface MultiGenericType<T, D>",
                 "name: string;",
                 "type: T;",
                 "value?: D | null;"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             Klass = typeof(ComplexType<>),
             ShouldContain = [
@@ -64,7 +65,7 @@ public class ClassConversionTask
                 "dictionary?: Map<string, Map<T, SimpleGenericType<T | null> | null> | null> | null;"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             Klass = typeof(AttributedType),
             ShouldContain = [
@@ -80,7 +81,7 @@ public class ClassConversionTask
                 "description?: string | null;"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             // The property is OuterContainer<int>.InnerContainer<string>. The locally-declared
             // generic argument is the inner one (string), so the emitted type must be
@@ -94,7 +95,7 @@ public class ClassConversionTask
                 "InnerContainer<number>"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             Klass = typeof(CollectionsDto),
             ShouldContain = [
@@ -103,14 +104,15 @@ public class ClassConversionTask
                 "names: string[];",
                 "intList: number[];",
                 "stringEnumerable: string[];",
-                "intSet: number[];"
+                "intSet: number[];",
+                "readOnlyMap: Map<string, number>;"
             ],
             ShouldNotContain = [
                 "number[] | null",
                 "string[] | null"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             Klass = typeof(ToStringTypesDto),
             ShouldContain = [
@@ -121,7 +123,7 @@ public class ClassConversionTask
                 "duration: string;"   // TimeSpan
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             Klass = typeof(ObjectPropertyDto),
             ShouldContain = [
@@ -129,7 +131,7 @@ public class ClassConversionTask
                 "payload: unknown;"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             Klass = typeof(ArrayOfComplexDto),
             ShouldContain = [
@@ -138,7 +140,7 @@ public class ClassConversionTask
                 "items: SimpleObject[];"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             Klass = typeof(InterfaceDictionaryDto),
             ShouldContain = [
@@ -146,7 +148,7 @@ public class ClassConversionTask
                 "map: Map<string, number>;"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             // Non-generic subclass of List<string>: element type must come from the
             // implemented IEnumerable<T>, not from the (empty) own generic arguments.
@@ -156,7 +158,7 @@ public class ClassConversionTask
                 "items: string[];"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
         {
             // Static properties and indexers are not serialized and must not be emitted.
             Klass = typeof(StaticAndIndexerDto),
@@ -169,7 +171,22 @@ public class ClassConversionTask
                 "item:"
             ]
         };
-        yield return new ClassConversionTask
+        yield return new ClassConversionFixture
+        {
+            // Recursive generic: self-references (direct and inside a collection) must not
+            // import the type's own file — TreeNode<T> constructed != typeof(TreeNode<>).
+            Klass = typeof(TreeNode<>),
+            ShouldContain = [
+                "export interface TreeNode<T>",
+                "value: T;",
+                "parent?: TreeNode<T> | null;",
+                "children: TreeNode<T>[];"
+            ],
+            ShouldNotContain = [
+                "import"
+            ]
+        };
+        yield return new ClassConversionFixture
         {
             Klass = typeof(IgnoredEnum),
             ShouldContain = [

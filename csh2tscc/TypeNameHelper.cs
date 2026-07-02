@@ -10,6 +10,13 @@ internal static class TypeNameHelper
         (useFullNames ? type.FullName ?? type.Name : type.Name).Replace('.', '_');
 
     /// <summary>
+    /// TypeScript identifier of a type as it appears in generated code and file names:
+    /// the (optionally full) name with dots replaced and the generic arity suffix stripped.
+    /// </summary>
+    internal static string GetNormalizedTypeScriptName(Type type, bool useFullNames) =>
+        NormalizeClassName(GetTypeScriptName(type, useFullNames));
+
+    /// <summary>
     /// Lower-cases the first character when <paramref name="camelCase"/> is enabled.
     /// Safe for empty strings. Pure function — extracted so it can be unit-tested directly.
     /// </summary>

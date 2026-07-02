@@ -19,6 +19,26 @@ internal static class Program
 
     internal static void RunOptions(Options opts)
     {
+        try
+        {
+            RunOptionsCore(opts);
+        }
+        catch (Exception ex)
+        {
+            // Configuration and generation errors surface as a readable message, not a stack
+            // trace; --verbose prints the full exception for troubleshooting.
+            Console.Error.WriteLine($"Error: {ex.Message}");
+            if (opts.Verbose)
+            {
+                Console.Error.WriteLine(ex);
+            }
+
+            Environment.ExitCode = 1;
+        }
+    }
+
+    private static void RunOptionsCore(Options opts)
+    {
         opts.Validate();
 
         Executor.Executor.Execute(new TypesGeneratorParameters

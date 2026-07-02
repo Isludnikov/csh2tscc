@@ -34,7 +34,7 @@ public class TypesGenerator
     }
 
     private string OutputFileName(Type type) =>
-        TypeNameHelper.NormalizeClassName(TypeNameHelper.GetTypeScriptName(type, _parameters.UseFullNames)) + _parameters.FileExtension;
+        TypeNameHelper.GetNormalizedTypeScriptName(type, _parameters.UseFullNames) + _parameters.FileExtension;
 
     internal string BuildFileFromType(Type typeToWrite) => _builder.BuildFileFromType(typeToWrite);
 

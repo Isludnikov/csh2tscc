@@ -36,7 +36,7 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
                 continue;
             }
 
-            sb.AppendLine($"  {field.Name} = '{result.Name}',");
+            sb.AppendLine($"  {field.Name} = '{EscapeSingleQuoted(result.Name)}',");
         }
 
         sb.AppendLine('}');
@@ -49,16 +49,22 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
         var genericParameters = typeToWrite.IsGenericType ? typeToWrite.GetGenericArguments() : [];
         var genericHeader = genericParameters.Length == 0
             ? string.Empty
-            : $"{TypeScriptConstants.GenericOpen}{string.Join(",", genericParameters.Select(x => x.Name))}{TypeScriptConstants.GenericClose}";
+            : $"{TypeScriptConstants.GenericOpen}{string.Join(TypeScriptConstants.GenericSeparator, genericParameters.Select(x => x.Name))}{TypeScriptConstants.GenericClose}";
+        var ownName = TypeNameHelper.GetNormalizedTypeScriptName(typeToWrite, parameters.UseFullNames);
         var importsAdded = false;
         foreach (var affType in affected)
         {
-            if (affType == typeToWrite)
+            var importName = TypeNameHelper.GetNormalizedTypeScriptName(affType, parameters.UseFullNames);
+
+            // Comparing by emitted name (not by Type identity) also catches recursive generics:
+            // TreeNode<T> referencing TreeNode<T> is a constructed type != the open definition,
+            // yet importing the file from itself would be invalid.
+            if (importName == ownName)
             {
                 continue;
             }
 
-            sb.AppendLine(string.Format(TypeScriptConstants.ImportFormat, TypeNameHelper.NormalizeClassName(TypeNameHelper.GetTypeScriptName(affType, parameters.UseFullNames))));
+            sb.AppendLine(string.Format(TypeScriptConstants.ImportFormat, importName));
             importsAdded = true;
         }
 
@@ -67,7 +73,7 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
             sb.AppendLine();
         }
 
-        sb.AppendLine($"{TypeScriptConstants.ExportInterface} {TypeNameHelper.NormalizeClassName(TypeNameHelper.GetTypeScriptName(typeToWrite, parameters.UseFullNames))}{genericHeader} {{");
+        sb.AppendLine($"{TypeScriptConstants.ExportInterface} {ownName}{genericHeader} {{");
 
         var properties = CommonHelper.GetSerializableProperties(typeToWrite);
 
@@ -137,14 +143,14 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
                 var prop = attributeType.GetProperty(attributePropertyName)
                     ?? throw new AttributeProcessingException(
                         $"No property name [{attributePropertyName}] for type [{attributeType.Name}]",
-                        attributeType.Name);
+                        attributeType.Name, defaultName, parentType);
 
                 var extractedName = prop.GetValue(attribute, null)?.ToString();
                 if (extractedName == null && throwOnNullName)
                 {
                     throw new AttributeProcessingException(
                         $"Property name [{attributePropertyName}] for type [{attributeType.Name}] is null",
-                        attributeType.Name);
+                        attributeType.Name, defaultName, parentType);
                 }
 
                 name = extractedName ?? name;
@@ -183,4 +189,8 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
 
         return new AttributeProcessingResult(name, isBlocked);
     }
+
+    /// <summary>Escapes a value for embedding into a single-quoted TypeScript string literal.</summary>
+    private static string EscapeSingleQuoted(string value) =>
+        value.Replace("\\", "\\\\").Replace("'", "\\'");
 }

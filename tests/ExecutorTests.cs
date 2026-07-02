@@ -37,4 +37,24 @@ public class ExecutorTests
         Assert.False(File.Exists(stale), "Stale .tsx files must be removed before writing.");
         Assert.NotEmpty(Directory.EnumerateFiles(output.Path, "*.tsx"));
     }
+
+    [Fact]
+    public void Execute_CleanOutputDirectory_KeepsLongerExtensionsMatchedByWin32Quirk()
+    {
+        using var output = new TempOutputDirectory();
+
+        // The Win32 "*.tsx" pattern also matches longer extensions like ".tsxbak" —
+        // such files are not generated output and must survive the cleanup.
+        var backup = Path.Combine(output.Path, "old.tsxbak");
+        File.WriteAllText(backup, "backup");
+
+        var config = ParametersBuilder.ForIntegrationDll()
+            .WithOutputDirectory(output.Path)
+            .WithCleanOutputDirectory()
+            .Build();
+
+        ExecutorRunner.Execute(config);
+
+        Assert.True(File.Exists(backup), "Files with longer extensions must not be deleted.");
+    }
 }

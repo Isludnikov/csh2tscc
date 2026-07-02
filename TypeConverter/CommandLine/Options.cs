@@ -13,10 +13,10 @@ public class Options
     public const string SerializationNamingOption = "serializationNaming";
 
     [Option('o', "out", Required = true, HelpText = "OutputDirectory")]
-    public string OutputDirectory { get; set; }
+    public string OutputDirectory { get; set; } = string.Empty;
 
     [Option('l', "libraries", Required = true, HelpText = "Libraries files to be processed")]
-    public IEnumerable<string> Libraries { get; set; }
+    public IEnumerable<string> Libraries { get; set; } = [];
 
     [Option('n', "namespaces", Required = false, HelpText = "Namespaces to be processed")]
     public IEnumerable<string> Namespaces { get; set; } = [];
@@ -36,7 +36,7 @@ public class Options
     public bool CleanOutputDirectory { get; set; }
 
     [Option(Default = ".tsx", HelpText = "files extension")]
-    public string FileExtension { get; set; }
+    public string FileExtension { get; set; } = ".tsx";
 
     [Option(Default = false, HelpText = "use full names")]
     public bool UseFullNames { get; set; }

@@ -106,6 +106,10 @@ public class TypeResolverTests
         Assert.Equal("Map<string, number>", Resolve(typeof(Dictionary<string, int>), container: BooleanContainer.CreateFalse()));
 
     [Fact]
+    public void ReadOnlyDictionary_ResolvesToMap() =>
+        Assert.Equal("Map<string, number>", Resolve(typeof(IReadOnlyDictionary<string, int>), container: BooleanContainer.CreateFalse()));
+
+    [Fact]
     public void UnsupportedType_Throws_WhenUnknownToStringDisabled()
     {
         Assert.Throws<UnsupportedTypeException>(() =>

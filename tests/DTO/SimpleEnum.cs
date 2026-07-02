@@ -10,5 +10,8 @@ public enum SimpleEnum
     [JsonStringEnumMemberName("2")]
     Two,
     [JsonStringEnumMemberName("three")]
-    Three
+    Three,
+    // Apostrophe in the serialized name must be escaped in the single-quoted TS literal.
+    [JsonStringEnumMemberName("O'Brien")]
+    Four
 }

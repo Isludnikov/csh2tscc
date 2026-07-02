@@ -5,12 +5,27 @@ namespace tests;
 public class AffectedClassTests
 {
     [Theory]
-    [MemberData(nameof(AffectedTypesTask.GetFixtures), MemberType = typeof(AffectedTypesTask))]
-    public void TestAffectedTypes(AffectedTypesTask task)
+    [MemberData(nameof(AffectedTypesFixture.GetFixtures), MemberType = typeof(AffectedTypesFixture))]
+    public void TestAffectedTypes(AffectedTypesFixture task)
     {
         var affectedTypes = ParametersBuilder.ForLocalDto().BuildGenerator().ListAffectedTypes(task.Klass);
 
-        Assert.True(task.ShouldContain.Count == 0 || task.ShouldContain.All(x => affectedTypes.Any(y => y.GUID == x.GUID)));
-        Assert.True(task.ShouldNotContain.Count == 0 || task.ShouldNotContain.All(x => affectedTypes.All(y => y.GUID != x.GUID)));
+        foreach (var expected in task.ShouldContain)
+        {
+            Assert.Contains(affectedTypes, t => SameTypeDefinition(t, expected));
+        }
+
+        foreach (var forbidden in task.ShouldNotContain)
+        {
+            Assert.DoesNotContain(affectedTypes, t => SameTypeDefinition(t, forbidden));
+        }
     }
+
+    /// <summary>
+    /// Affected types may be constructed generics (SimpleGenericType&lt;T&gt;) while fixtures
+    /// reference open definitions (SimpleGenericType&lt;&gt;) — compare by generic definition.
+    /// </summary>
+    private static bool SameTypeDefinition(Type a, Type b) => Definition(a) == Definition(b);
+
+    private static Type Definition(Type type) => type.IsGenericType ? type.GetGenericTypeDefinition() : type;
 }
