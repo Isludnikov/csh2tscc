@@ -98,6 +98,10 @@ public class TypeResolverTests
         Assert.Equal("string[]", Resolve(typeof(List<string>), container: BooleanContainer.CreateFalse()));
 
     [Fact]
+    public void NonGenericEnumerableSubclass_ResolvesToElementArray() =>
+        Assert.Equal("string[]", Resolve(typeof(CustomStringList), container: BooleanContainer.CreateFalse()));
+
+    [Fact]
     public void Dictionary_ResolvesToMap() =>
         Assert.Equal("Map<string, number>", Resolve(typeof(Dictionary<string, int>), container: BooleanContainer.CreateFalse()));
 

@@ -138,7 +138,11 @@ internal class TypeResolver(TypesGeneratorParameters parameters)
             return null;
         }
 
-        var genericArguments = propertyType.GetGenericArguments();
+        // Non-generic subclasses (class CustomList : List<string>) carry no generic arguments
+        // of their own — take the element type from the implemented IEnumerable<T> instead.
+        var genericArguments = propertyType.IsGenericType
+            ? propertyType.GetGenericArguments()
+            : propertyType.GetInterfaces().First(i => i.InstanceOfGenericType(typeof(IEnumerable<>))).GetGenericArguments();
         var elementContext = context.CreateDerived(
             genericArguments[0],
             nullableList,

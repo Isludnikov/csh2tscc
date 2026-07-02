@@ -148,6 +148,29 @@ public class ClassConversionTask
         };
         yield return new ClassConversionTask
         {
+            // Non-generic subclass of List<string>: element type must come from the
+            // implemented IEnumerable<T>, not from the (empty) own generic arguments.
+            Klass = typeof(NonGenericCollectionDto),
+            ShouldContain = [
+                "export interface NonGenericCollectionDto",
+                "items: string[];"
+            ]
+        };
+        yield return new ClassConversionTask
+        {
+            // Static properties and indexers are not serialized and must not be emitted.
+            Klass = typeof(StaticAndIndexerDto),
+            ShouldContain = [
+                "export interface StaticAndIndexerDto",
+                "id: number;"
+            ],
+            ShouldNotContain = [
+                "staticName",
+                "item:"
+            ]
+        };
+        yield return new ClassConversionTask
+        {
             Klass = typeof(IgnoredEnum),
             ShouldContain = [
                 "export enum IgnoredEnum",

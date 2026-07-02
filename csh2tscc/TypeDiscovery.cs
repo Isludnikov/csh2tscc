@@ -25,7 +25,7 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
             AddType(affected, type.GenericTypeArguments);
         }
 
-        var props = type.GetProperties();
+        var props = CommonHelper.GetSerializableProperties(type);
         foreach (var prop in props)
         {
             if (prop.PropertyType.IsGenericType)
@@ -120,7 +120,7 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
 
     private bool IsInExcludedNamespace(Type type) =>
         !string.IsNullOrWhiteSpace(type.FullName) &&
-        parameters.RootNamespacesExcluded.Any(excluded => type.FullName.StartsWith(excluded));
+        parameters.RootNamespacesExcluded.Any(excluded => IsWithinNamespace(type.FullName, excluded));
 
     private static bool IsCollectionType(Type type)
     {
@@ -139,9 +139,16 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
         parameters.CustomMap.ContainsKey(type.Name) ||
         (!string.IsNullOrWhiteSpace(type.FullName) && parameters.CustomMap.ContainsKey(type.FullName));
 
-    private bool IncludedType(string? needle) => needle != null && parameters.RootNamespaces.Any(needle.StartsWith);
+    private bool IncludedType(string? needle) => needle != null && parameters.RootNamespaces.Any(ns => IsWithinNamespace(needle, ns));
 
     private bool ExcludedType(string? needle) => needle != null &&
                                                  parameters.RootNamespacesExcluded.Count != 0 &&
-                                                 parameters.RootNamespacesExcluded.Any(needle.StartsWith);
+                                                 parameters.RootNamespacesExcluded.Any(ns => IsWithinNamespace(needle, ns));
+
+    /// <summary>
+    /// Prefix match with a dot boundary: "My.DTO" covers "My.DTO" and "My.DTO.Sub.Type",
+    /// but not the neighboring namespace "My.DTOther".
+    /// </summary>
+    private static bool IsWithinNamespace(string needle, string namespacePrefix) =>
+        needle == namespacePrefix || needle.StartsWith(namespacePrefix + '.');
 }

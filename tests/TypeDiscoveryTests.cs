@@ -55,6 +55,41 @@ public class TypeDiscoveryTests
     }
 
     [Fact]
+    public void ListAffectedTypes_NeighborNamespaceSharingPrefix_IsExcluded()
+    {
+        // "tests.DTONeighbor" starts with the literal string "tests.DTO" but is a different
+        // namespace — the root-namespace match must respect the dot boundary.
+        var affected = Discovery().ListAffectedTypes(typeof(NeighborHostDto));
+
+        Assert.DoesNotContain(affected, t => t == typeof(tests.DTONeighbor.NeighborType));
+    }
+
+    [Fact]
+    public void GetTypes_NeighborNamespaceSharingPrefix_IsNotExported()
+    {
+        // Root namespace is "Dto.Integration.Tests.DTO"; the assembly also contains
+        // "Dto.Integration.Tests.DTONeighbor" which shares the prefix but must not match.
+        var types = new TypeDiscovery(ParametersBuilder.ForIntegrationDll().Build()).GetTypes();
+
+        Assert.DoesNotContain(types, t => t.Namespace == "Dto.Integration.Tests.DTONeighbor");
+    }
+
+    [Fact]
+    public void ListAffectedTypes_StaticProperty_DoesNotSurfaceReferencedType()
+    {
+        // Static properties are not serialized, so types they reference must not be imported.
+        var affected = Discovery().ListAffectedTypes(typeof(StaticRefHostDto));
+
+        Assert.DoesNotContain(affected, t => t == typeof(SimpleObject));
+    }
+
+    private class StaticRefHostDto
+    {
+        public static SimpleObject? StaticRef { get; set; }
+        public int Id { get; set; }
+    }
+
+    [Fact]
     public void GetTypes_LoadsExportedTypesFromAssembly_AndAppliesNamespaceFilters()
     {
         // Exercises the full assembly-loading + IsExportableType pipeline against the on-disk

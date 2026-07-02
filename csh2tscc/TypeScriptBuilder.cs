@@ -69,7 +69,7 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
 
         sb.AppendLine($"{TypeScriptConstants.ExportInterface} {TypeNameHelper.NormalizeClassName(TypeNameHelper.GetTypeScriptName(typeToWrite, parameters.UseFullNames))}{genericHeader} {{");
 
-        var properties = typeToWrite.GetProperties();
+        var properties = CommonHelper.GetSerializableProperties(typeToWrite);
 
         foreach (var property in properties)
         {

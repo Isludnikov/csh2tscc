@@ -17,10 +17,24 @@ public class TypesGenerator
 
     public TypesGeneratorParameters Config => _parameters;
 
-    public Dictionary<string, string> TransformTypes() =>
-        _discovery.GetTypes().ToDictionary(
-            typeToWrite => TypeNameHelper.NormalizeClassName(TypeNameHelper.GetTypeScriptName(typeToWrite, _parameters.UseFullNames)) + _parameters.FileExtension,
-            _builder.BuildFileFromType);
+    public Dictionary<string, string> TransformTypes()
+    {
+        var types = _discovery.GetTypes();
+
+        var collisions = types.GroupBy(OutputFileName).Where(g => g.Count() > 1).ToList();
+        if (collisions.Count > 0)
+        {
+            var details = string.Join("; ", collisions.Select(g =>
+                $"[{g.Key}] <- {string.Join(", ", g.Select(t => t.FullName ?? t.Name))}"));
+            throw new TypeConversionException(
+                $"Multiple types map to the same output file: {details}. Use UseFullNames or CustomMap to disambiguate.");
+        }
+
+        return types.ToDictionary(OutputFileName, _builder.BuildFileFromType);
+    }
+
+    private string OutputFileName(Type type) =>
+        TypeNameHelper.NormalizeClassName(TypeNameHelper.GetTypeScriptName(type, _parameters.UseFullNames)) + _parameters.FileExtension;
 
     internal string BuildFileFromType(Type typeToWrite) => _builder.BuildFileFromType(typeToWrite);
 
