@@ -83,17 +83,49 @@ public class ClassConversionFixture
         };
         yield return new ClassConversionFixture
         {
-            // The property is OuterContainer<int>.InnerContainer<string>. The locally-declared
-            // generic argument is the inner one (string), so the emitted type must be
-            // InnerContainer<string>, NOT InnerContainer<number> (the outer arg).
+            // The property is OuterContainer<int>.InnerContainer<string>. The generated interface
+            // declares both parameters (outer first, and the members use TOuter), so a reference
+            // has to pass both — outer first, the way reflection lists them.
             Klass = typeof(UseNestedGeneric),
             ShouldContain = [
                 "export interface UseNestedGeneric",
-                "nested: InnerContainer<string>;"
+                "import type { InnerContainer } from './InnerContainer';",
+                "nested: InnerContainer<number, string>;"
             ],
             ShouldNotContain = [
-                "InnerContainer<number>"
+                "InnerContainer<string>;",
+                "InnerContainer<number>;"
             ]
+        };
+        yield return new ClassConversionFixture
+        {
+            // The nested generic itself: its header lists the outer parameter too, since it is used.
+            Klass = typeof(OuterContainer<>.InnerContainer<>),
+            ShouldContain = [
+                "export interface InnerContainer<TOuter, TInner>",
+                "outer: TOuter;",
+                "inner: TInner;"
+            ]
+        };
+        yield return new ClassConversionFixture
+        {
+            // A non-generic type nested in a generic one is still generic (it carries T) and used
+            // to crash the resolver, which looked for "locally declared" parameters and found none.
+            Klass = typeof(UseNestedInGeneric),
+            ShouldContain = [
+                "import type { Leaf } from './Leaf';",
+                "leaf: Leaf<string>;"
+            ]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(OuterContainer<>.Leaf),
+            ShouldContain = [
+                "export interface Leaf<TOuter>",
+                "outer: TOuter;",
+                "label: string;"
+            ],
+            ShouldNotContain = ["label: string | null;"]
         };
         yield return new ClassConversionFixture
         {
@@ -197,6 +229,140 @@ public class ClassConversionFixture
             ],
             ShouldNotContain = [
                 "import"
+            ]
+        };
+        yield return new ClassConversionFixture
+        {
+            // The nullable annotation of an element is its own flag, and a union element is
+            // parenthesised: "string | null[]" would mean string | (null[]).
+            Klass = typeof(ArrayNullabilityDto),
+            ShouldContain = [
+                "import type { SimpleObject } from './SimpleObject';",
+                "nullableElements: (string | null)[];",
+                "nullableArray: string[] | null;",
+                "nullableArrayOfNullable: (string | null)[] | null;",
+                "nullableIntArray: number[] | null;",
+                "nullableIntElements: (number | null)[];",
+                "nullableItems: (SimpleObject | null)[];",
+                "listOfNullable: (string | null)[];",
+                "listOfNullableInt: (number | null)[];",
+                "nullableListOfNullableItems: (SimpleObject | null)[] | null;",
+                "deep: Record<string, (string | null)[] | null> | null;",
+                "jagged: number[][];",
+                "jaggedOfNullable: (string | null)[][];",
+                "arrayOfLists: (string | null)[][];"
+            ],
+            ShouldNotContain = ["| null[]", "((", "))"]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(GenericKeyDictionaryDto),
+            ShouldContain = [
+                "import { SimpleEnum } from './SimpleEnum';",
+                "genericKey: Map<string[], string | null>;",
+                "nullableStringKey: Map<string | null, number>;",
+                "nullableEnumKey: Map<SimpleEnum | null, number>;",
+                "nullableIntKey: Map<number | null, string>;",
+                "subclass: Record<string, number>;"
+            ]
+        };
+        yield return new ClassConversionFixture
+        {
+            // The nested class has no NullableContext of its own; it inherits the outer one.
+            Klass = typeof(NestedNullabilityDto.Nested),
+            ShouldContain = [
+                "export interface Nested {",
+                "c: string;",
+                "d: string | null;",
+                "e: number;"
+            ],
+            ShouldNotContain = ["c: string | null;"]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(NestedNullabilityDto.Nested.Deeper),
+            ShouldContain = ["f: string;"],
+            ShouldNotContain = ["f: string | null;"]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(GenericStructDto),
+            ShouldContain = [
+                "import type { Pair } from './Pair';",
+                "pair: Pair<string | null, string>;",
+                "pairWithValue: Pair<number, string | null>;",
+                "nullablePair: Pair<string, string> | null;"
+            ]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(Pair<,>),
+            ShouldContain = ["export interface Pair<TA, TB>", "a: TA;", "b: TB;"]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(DeepGenericDto),
+            ShouldContain = [
+                "import type { Wrapper } from './Wrapper';",
+                "import type { SimpleObject } from './SimpleObject';",
+                "deep: Wrapper<Wrapper<string>>;",
+                "flat: Wrapper<number>;",
+                "deepNullable: Wrapper<Wrapper<SimpleObject> | null>;"
+            ],
+            ShouldNotContain = ["`", "[["]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(QuotedNameDto),
+            ShouldContain = [
+                "'kebab-name': string;",
+                "'with space': number;",
+                "'123start': number;",
+                @"'it\'s': number;",
+                "$ok_1: number;"
+            ],
+            ShouldNotContain = ["kebab-name:", "'$ok_1'"]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(HiddenPropertyDto),
+            ShouldContain = ["id: string;", "name: string;"],
+            ShouldNotContain = ["id: number;"]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(InheritedContextDto),
+            ShouldContain = ["count: number;", "title: string;", "subtitle: string | null;"],
+            ShouldNotContain = ["  title: string | null;"]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(IDerivedShape),
+            ShouldContain = ["export interface IDerivedShape", "age: number;", "name: string;", "id: number;"]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(RecordDto),
+            ShouldContain = ["export interface RecordDto", "id: number;", "name: string | null;"],
+            ShouldNotContain = ["equalityContract"]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(StructDto),
+            ShouldContain = ["export interface StructDto", "x: number;"]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(AbstractDtoBase),
+            ShouldContain = ["export interface AbstractDtoBase", "id: number;"]
+        };
+        yield return new ClassConversionFixture
+        {
+            Klass = typeof(EscapedEnum),
+            ShouldContain = [
+                @"Backslash = 'back\\slash',",
+                "NullNamed = 'NullNamed',",
+                "Plain = 'Plain',"
             ]
         };
         yield return new ClassConversionFixture

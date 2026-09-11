@@ -41,6 +41,35 @@ public class AssemblyLoadContextTests
     }
 
     [Fact]
+    public void Load_SeveralBasePaths_ProbesEachInTurn()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "csh2tscc-alc", Guid.NewGuid().ToString("N"));
+        var empty = Path.Combine(root, "empty");
+        var hit = Path.Combine(root, "hit");
+        Directory.CreateDirectory(empty);
+        Directory.CreateDirectory(hit);
+        try
+        {
+            var probeName = "AlcProbe_" + Guid.NewGuid().ToString("N");
+            var probePath = Path.Combine(hit, probeName + ".dll");
+            File.Copy(typeof(TypesGenerator).Assembly.Location, probePath);
+
+            // The first directory has no such file; the second one does.
+            var context = new ProbeLoadContext([empty, hit]);
+            var loaded = context.InvokeLoad(new AssemblyName(probeName));
+
+            Assert.NotNull(loaded);
+            Assert.Equal(probePath, loaded!.Location);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    [Fact]
     public void Load_UnresolvableAssembly_ReturnsNull()
     {
         // Not loaded, not present in any base path, and unknown to the default context:

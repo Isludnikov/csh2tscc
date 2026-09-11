@@ -9,15 +9,29 @@ public static class IsNullableHelper
     public static bool IsValueTypeNullable(Type t) => t.IsValueType && Nullable.GetUnderlyingType(t) != null;
 
     /// <summary>
-    /// Gets the default nullable setting from the class-level NullableContext attribute.
-    /// Returns true (nullable) if no context is specified.
+    /// Gets the default nullable setting from the NullableContext attribute of the type that
+    /// declares the member or, when it has none, of the nearest declaring type: the compiler emits
+    /// the attribute once on the outermost type and lets nested types inherit it. Returns true
+    /// (nullable) if no context is specified anywhere up the chain.
     /// </summary>
+    /// <remarks>
+    /// The declaring type, not the type being converted: an inherited property (from a base class
+    /// or an extended interface) was compiled under the context of the type that declares it.
+    /// </remarks>
     private static bool GetDefaultNullable(Type classType)
     {
-        var nullableContext = classType.CustomAttributes
-            .FirstOrDefault(x => x.AttributeType.FullName == WellKnownNames.NullableContextAttributeName);
+        for (var type = classType; type != null; type = type.DeclaringType)
+        {
+            var nullableContext = type.CustomAttributes
+                .FirstOrDefault(x => x.AttributeType.FullName == WellKnownNames.NullableContextAttributeName);
 
-        return nullableContext == null || (byte)nullableContext.ConstructorArguments[0].Value! == NullabilityConstants.Nullable;
+            if (nullableContext != null)
+            {
+                return (byte)nullableContext.ConstructorArguments[0].Value! == NullabilityConstants.Nullable;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -59,7 +73,7 @@ public static class IsNullableHelper
         if (property.PropertyType.IsValueType)
             return Nullable.GetUnderlyingType(property.PropertyType) != null;
 
-        var defaultNullable = GetDefaultNullable(classType);
+        var defaultNullable = GetDefaultNullable(property.DeclaringType ?? classType);
         var flags = TryGetNullableFlags(property);
 
         // First flag (index 0) indicates the property type's own nullability
@@ -68,6 +82,14 @@ public static class IsNullableHelper
 
     public static BooleanContainer IsNullableContainer(Type classType, PropertyInfo property)
     {
+        var defaultNullable = GetDefaultNullable(property.DeclaringType ?? classType);
+        var flags = TryGetNullableFlags(property);
+
+        // The flags describe the type arguments of a value type too: a struct Pair<string?, string>
+        // is written as [0, 2, 1] (0 for the struct itself, then its arguments).
+        if (flags != null)
+            return new BooleanContainer(flags, defaultNullable);
+
         // Value types use Nullable<T> wrapper
         if (property.PropertyType.IsValueType)
         {
@@ -75,12 +97,6 @@ public static class IsNullableHelper
                 ? BooleanContainer.CreateTrue()
                 : BooleanContainer.CreateFalse();
         }
-
-        var defaultNullable = GetDefaultNullable(classType);
-        var flags = TryGetNullableFlags(property);
-
-        if (flags != null)
-            return new BooleanContainer(flags, defaultNullable);
 
         return defaultNullable ? BooleanContainer.CreateTrue() : BooleanContainer.CreateFalse();
     }

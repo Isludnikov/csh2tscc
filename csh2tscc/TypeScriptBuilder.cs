@@ -1,9 +1,10 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace csh2tscc;
 
-internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolver resolver, TypeDiscovery discovery)
+internal partial class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolver resolver, TypeDiscovery discovery)
 {
     private record AttributeProcessingResult(string Name, bool IsBlocked);
 
@@ -58,15 +59,16 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
             ? string.Empty
             : $"{TypeScriptConstants.GenericOpen}{string.Join(TypeScriptConstants.GenericSeparator, genericParameters.Select(x => x.Name))}{TypeScriptConstants.GenericClose}";
         var ownName = TypeNameHelper.GetNormalizedTypeScriptName(typeToWrite, parameters.UseFullNames);
-        var importsAdded = false;
+
+        // Keyed by emitted name (not by Type identity): that catches recursive generics — TreeNode<T>
+        // referencing TreeNode<T> is a constructed type != the open definition, yet importing the
+        // file from itself would be invalid — and different constructions of one generic
+        // (Wrapper<string>, Wrapper<int>), which share a file and must be imported once.
+        var imported = new HashSet<string> { ownName };
         foreach (var affType in affected)
         {
             var importName = TypeNameHelper.GetNormalizedTypeScriptName(affType, parameters.UseFullNames);
-
-            // Comparing by emitted name (not by Type identity) also catches recursive generics:
-            // TreeNode<T> referencing TreeNode<T> is a constructed type != the open definition,
-            // yet importing the file from itself would be invalid.
-            if (importName == ownName)
+            if (!imported.Add(importName))
             {
                 continue;
             }
@@ -75,10 +77,9 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
                 ? TypeScriptConstants.ImportFormat
                 : TypeScriptConstants.ImportTypeFormat;
             sb.AppendLine(string.Format(format, importName));
-            importsAdded = true;
         }
 
-        if (importsAdded)
+        if (imported.Count > 1)
         {
             sb.AppendLine();
         }
@@ -126,7 +127,7 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
                 IsNullable = isNullable
             };
             AppendDoc(sb, _docs.ForMember(property), MemberIndent);
-            sb.AppendLine($"{MemberIndent}{result.Name}{(isNullable && parameters.OptionalNullableProperties ? TypeScriptConstants.OptionalProperty : string.Empty)}: {resolver.ResolveTypeToTypeScript(context)};");
+            sb.AppendLine($"{MemberIndent}{MemberName(result.Name)}{(isNullable && parameters.OptionalNullableProperties ? TypeScriptConstants.OptionalProperty : string.Empty)}: {resolver.ResolveTypeToTypeScript(context)};");
         }
 
         sb.AppendLine('}');
@@ -218,4 +219,16 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
     /// </summary>
     private static string EscapeQuoted(string value) =>
         value.Replace("\\", "\\\\").Replace($"{TypeScriptConstants.StringQuote}", $"\\{TypeScriptConstants.StringQuote}");
+
+    [GeneratedRegex("^[A-Za-z_$][A-Za-z0-9_$]*$")]
+    private static partial Regex IdentifierPattern();
+
+    /// <summary>
+    /// A member name as it can be written in an interface: a serialization attribute may pick a
+    /// name that is not an identifier ("kebab-name", "with space"), which has to be quoted.
+    /// </summary>
+    private static string MemberName(string name) =>
+        IdentifierPattern().IsMatch(name)
+            ? name
+            : $"{TypeScriptConstants.StringQuote}{EscapeQuoted(name)}{TypeScriptConstants.StringQuote}";
 }

@@ -12,10 +12,37 @@ public static class CommonHelper
     /// Public instance properties that take part in serialization: static properties and
     /// indexers are never serialized to JSON and must not appear in generated interfaces.
     /// </summary>
-    internal static PropertyInfo[] GetSerializableProperties(Type type) =>
-        type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+    /// <remarks>
+    /// Reflection lists a property hidden with <c>new</c> twice (once per declaring type); only
+    /// the most derived one is serialized, so only it is kept. An interface does not report the
+    /// members of the interfaces it extends, so those are gathered explicitly.
+    /// </remarks>
+    internal static PropertyInfo[] GetSerializableProperties(Type type)
+    {
+        const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
+        IEnumerable<PropertyInfo> properties = type.GetProperties(flags);
+        if (type.IsInterface)
+        {
+            properties = properties.Concat(type.GetInterfaces().SelectMany(i => i.GetProperties(flags)));
+        }
+
+        return properties
             .Where(property => property.GetIndexParameters().Length == 0)
+            .GroupBy(property => property.Name)
+            .Select(group => group.OrderByDescending(property => InheritanceDepth(property.DeclaringType)).First())
             .ToArray();
+    }
+
+    private static int InheritanceDepth(Type? type)
+    {
+        var depth = 0;
+        for (var current = type; current != null; current = current.BaseType)
+        {
+            ++depth;
+        }
+
+        return depth;
+    }
     internal static bool HasNonNullableAttribute(PropertyInfo property)
     {
         var preventAttributeExists =

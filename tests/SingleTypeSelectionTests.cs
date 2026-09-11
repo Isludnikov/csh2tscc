@@ -38,6 +38,31 @@ public class SingleTypeSelectionTests
     }
 
     [Fact]
+    public void GenericTypeIsSelectedByItsCSharpName()
+    {
+        // The CLR name is "tests.DTO.Wrapper`1"; nobody types the arity on a command line.
+        var files = ParametersBuilder.ForLocalDto()
+            .WithLibraries(typeof(Wrapper<>).Assembly.Location)
+            .WithRootNamespaces("tests.DTO.Wrapper")
+            .BuildGenerator()
+            .TransformTypes();
+
+        Assert.Equal(["Wrapper.tsx"], files.Keys);
+    }
+
+    [Fact]
+    public void SelectedTypeBringsItsNestedTypes()
+    {
+        var files = ParametersBuilder.ForLocalDto()
+            .WithLibraries(typeof(NestedNullabilityDto).Assembly.Location)
+            .WithRootNamespaces("tests.DTO.NestedNullabilityDto")
+            .BuildGenerator()
+            .TransformTypes();
+
+        Assert.Equal(["Deeper.tsx", "Nested.tsx", "NestedNullabilityDto.tsx"], files.Keys.Order());
+    }
+
+    [Fact]
     public void TypeOutsideTheSelectionIsStillRefused()
     {
         // Only the owner is selected, not the SimpleObject it refers to.

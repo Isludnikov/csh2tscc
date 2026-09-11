@@ -64,6 +64,14 @@ internal static class Program
 
     internal static void HandleParseError(IEnumerable<Error> errs)
     {
+        // --help and --version also arrive here; the parser has already printed what was asked
+        // for, and answering a question is not a failure.
+        var errors = errs.ToList();
+        if (errors.IsHelp() || errors.IsVersion())
+        {
+            return;
+        }
+
         Console.Error.WriteLine("Failed to parse command-line arguments.");
         Environment.ExitCode = -1;
     }

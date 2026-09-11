@@ -1,13 +1,32 @@
+using System.Text.RegularExpressions;
+
 namespace csh2tscc;
 
-internal static class TypeNameHelper
+internal static partial class TypeNameHelper
 {
-    internal static string NormalizeClassName(string className) => className.Contains(TypeScriptConstants.GenericAritySeparator)
-        ? className[..className.LastIndexOf(TypeScriptConstants.GenericAritySeparator)]
-        : className;
+    /// <summary>
+    /// The arity suffix of a generic type name (`1, and ``1 for a generic method). A nested generic
+    /// carries one per level ("Outer`1+Inner`1"), so every occurrence is removed, not just the last.
+    /// </summary>
+    [GeneratedRegex("`+\\d+")]
+    private static partial Regex ArityPattern();
 
-    internal static string GetTypeScriptName(Type type, bool useFullNames) =>
-        (useFullNames ? type.FullName ?? type.Name : type.Name).Replace('.', '_');
+    internal static string NormalizeClassName(string className) => ArityPattern().Replace(className, string.Empty);
+
+    /// <summary>
+    /// The (optionally full) CLR name of a type with the namespace and nesting separators replaced
+    /// by underscores. A constructed generic is named after its definition: its own FullName spells
+    /// out every type argument with assembly qualification, which is not a name for anything.
+    /// </summary>
+    internal static string GetTypeScriptName(Type type, bool useFullNames)
+    {
+        var subject = type is { IsGenericType: true, IsGenericTypeDefinition: false }
+            ? type.GetGenericTypeDefinition()
+            : type;
+
+        var name = useFullNames ? subject.FullName ?? subject.Name : subject.Name;
+        return name.Replace('.', '_').Replace('+', '_');
+    }
 
     /// <summary>
     /// TypeScript identifier of a type as it appears in generated code and file names:

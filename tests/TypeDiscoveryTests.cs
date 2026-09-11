@@ -90,6 +90,52 @@ public class TypeDiscoveryTests
     }
 
     [Fact]
+    public void GetTypes_SkipsDelegatesAndStaticClasses_KeepsOtherShapes()
+    {
+        var types = new TypeDiscovery(ParametersBuilder.ForLocalDto()
+                .WithLibraries(typeof(SimpleObject).Assembly.Location)
+                .Build())
+            .GetTypes();
+
+        Assert.DoesNotContain(types, t => t.Name == nameof(NotADtoDelegate));
+        Assert.DoesNotContain(types, t => t.Name == nameof(NotADtoStaticClass));
+        Assert.Contains(types, t => t.Name == nameof(AbstractDtoBase));
+        Assert.Contains(types, t => t.Name == nameof(RecordDto));
+        Assert.Contains(types, t => t.Name == nameof(StructDto));
+        Assert.Contains(types, t => t.Name == nameof(IDerivedShape));
+        Assert.Contains(types, t => t.Name == nameof(SimpleEnum));
+        Assert.Contains(types, t => t.FullName == typeof(NestedNullabilityDto.Nested.Deeper).FullName);
+    }
+
+    [Fact]
+    public void GetTypes_SeveralLibraries_AreAllScanned()
+    {
+        var types = new TypeDiscovery(new ParametersBuilder()
+                .WithLibraries(typeof(SimpleObject).Assembly.Location, "Dto.Integration.Tests.dll")
+                .WithRootNamespaces("tests.DTO.SimpleObject", "Dto.Integration.Tests.DTO.Account")
+                .Build())
+            .GetTypes();
+
+        Assert.Equal(["Account", "SimpleObject"], types.Select(t => t.Name).Order());
+    }
+
+    [Fact]
+    public void ListAffectedTypes_ReferenceInExcludedNamespace_IsDropped()
+    {
+        var affected = Discovery().ListAffectedTypes(typeof(ExcludedReferenceDto));
+
+        Assert.Empty(affected);
+    }
+
+    [Fact]
+    public void ListAffectedTypes_SameGenericConstructedTwice_IsListedOnce()
+    {
+        var affected = Discovery().ListAffectedTypes(typeof(DeepGenericDto));
+
+        Assert.Single(affected, t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Wrapper<>));
+    }
+
+    [Fact]
     public void GetTypes_LoadsExportedTypesFromAssembly_AndAppliesNamespaceFilters()
     {
         // Exercises the full assembly-loading + IsExportableType pipeline against the on-disk

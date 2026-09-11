@@ -18,6 +18,35 @@ public class ExecutorTests
     }
 
     [Fact]
+    public void Execute_CreatesMissingOutputDirectory()
+    {
+        using var output = new TempOutputDirectory();
+        var nested = Path.Combine(output.Path, "deeper", "still");
+        var config = ParametersBuilder.ForIntegrationDll().WithOutputDirectory(nested).Build();
+
+        ExecutorRunner.Execute(config);
+
+        Assert.True(Directory.Exists(nested));
+        Assert.NotEmpty(Directory.EnumerateFiles(nested, "*.tsx"));
+    }
+
+    [Fact]
+    public void Execute_NothingSelected_WritesNoFilesButPreparesTheDirectory()
+    {
+        using var output = new TempOutputDirectory();
+        var target = Path.Combine(output.Path, "empty");
+        var config = ParametersBuilder.ForIntegrationDll()
+            .WithRootNamespaces("Dto.Integration.Tests.NonExisting")
+            .WithOutputDirectory(target)
+            .Build();
+
+        ExecutorRunner.Execute(config);
+
+        Assert.True(Directory.Exists(target));
+        Assert.Empty(Directory.EnumerateFiles(target));
+    }
+
+    [Fact]
     public void Execute_CleanOutputDirectory_RemovesOnlyMatchingExtension()
     {
         using var output = new TempOutputDirectory();

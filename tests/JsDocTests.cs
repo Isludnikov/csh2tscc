@@ -83,6 +83,110 @@ public class JsDocTests(ITestOutputHelper testOutputHelper)
     }
 
     [Fact]
+    public void MethodCrefKeepsOnlyTheMethodName()
+    {
+        var text = Generate(typeof(DocumentedDto));
+
+        // "M:Dto.Integration.Tests.DTO.DocumentedDto.Describe(System.String)" — the parameter list
+        // has dots of its own and must not win.
+        Assert.Contains("Filled in by Describe, null until then;", text);
+        Assert.DoesNotContain("String)", text);
+        Assert.DoesNotContain("M:Dto", text);
+    }
+
+    [Fact]
+    public void SeeAlsoAndNestedMemberCrefsBecomeTheirLastSegment()
+    {
+        var text = Generate(typeof(DocumentedDto));
+        Assert.Contains("see also DocumentedStage and Line.", text);
+    }
+
+    [Fact]
+    public void CodeBlockBecomesBackticksOnItsOwnLine()
+    {
+        var text = Generate(typeof(DocumentedDto));
+        Assert.Contains($"{Environment.NewLine}   * `var reason = deployment.Reason;`{Environment.NewLine}", text);
+    }
+
+    [Fact]
+    public void UnknownInlineTagsKeepTheirTextAndLinksTheirCaption() =>
+        Assert.Contains("  /** Formatting tags keep their text; a link keeps its caption. */", Generate(typeof(DocumentedDto)));
+
+    [Fact]
+    public void RemarksAloneAreEnoughForAComment() =>
+        Assert.Contains("  /** Only remarks, no summary. */", Generate(typeof(DocumentedDto)));
+
+    [Fact]
+    public void EmptySummaryGetsNoComment()
+    {
+        var lines = Generate(typeof(DocumentedDto)).Split(Environment.NewLine);
+        var index = Array.FindIndex(lines, line => line.Contains("emptySummary"));
+
+        Assert.True(index > 0, "The emptySummary property is missing from the output.");
+        Assert.DoesNotContain("*", lines[index - 1]);
+    }
+
+    [Fact]
+    public void GenericTypeIsLookedUpByItsDefinition()
+    {
+        // The compiler documents "T:...DocumentedEnvelope`1"; the arity has to be kept for the lookup.
+        var text = Generate(typeof(DocumentedEnvelope<>));
+
+        Assert.Contains("Wraps a T for the wire.", text);
+        Assert.Contains("  /** The payload. */", text);
+        Assert.Contains("export interface DocumentedEnvelope<T> {", text);
+    }
+
+    [Fact]
+    public void ParagraphOnlyRemarksAreSeparatedByBlankCommentLines()
+    {
+        var text = Generate(typeof(DocumentedEnvelope<>));
+        Assert.Contains($" * Paragraphs only.{Environment.NewLine} *{Environment.NewLine} * No loose text around them.", text);
+    }
+
+    [Fact]
+    public void NestedTypeIsLookedUpWithDotsNotPlus()
+    {
+        // Reflection says "DocumentedDto+Detail"; the documentation file says "DocumentedDto.Detail".
+        var text = Generate(typeof(DocumentedDto.Detail));
+
+        Assert.Contains("/** A nested detail of the deployment. */", text);
+        Assert.Contains("  /** One detail line. */", text);
+    }
+
+    [Fact]
+    public void MalformedDocumentationFileIsIgnored()
+    {
+        // A half-written .xml next to the assembly must not stop generation: the output is still
+        // correct, just without comments.
+        var dir = Path.Combine(Path.GetTempPath(), "csh2tscc-xmldoc", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var source = typeof(DocumentedDto).Assembly.Location;
+            var copy = Path.Combine(dir, Path.GetFileName(source));
+            File.Copy(source, copy);
+            File.WriteAllText(Path.ChangeExtension(copy, ".xml"), "<doc><members><member name=\"T:Broken\">");
+
+            var files = ParametersBuilder.ForIntegrationDll()
+                .WithLibraries(copy)
+                .WithJsDoc()
+                .BuildGenerator()
+                .TransformTypes();
+
+            var documented = files["DocumentedDto.tsx"];
+            Assert.DoesNotContain("/**", documented);
+            Assert.Contains("export interface DocumentedDto {", documented);
+        }
+        finally
+        {
+            try { Directory.Delete(dir, recursive: true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    [Fact]
     public void FlagOffLeavesOutputUnchanged()
     {
         var text = Generate(typeof(DocumentedDto), jsDoc: false);

@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using csh2tscc;
 using Dto.Integration.Tests.DTO.Extensions;
 using tests.DTO;
@@ -106,6 +107,44 @@ public class ConfigurationAndErrorTests
         Assert.Equal(nameof(CustomNameAttribute), ex.AttributeName);
         Assert.Equal("name", ex.PropertyName); // camelCased default name of NullNameDto.Name
         Assert.Equal(typeof(NullNameDto), ex.ParentType);
+    }
+
+    // === Error path: AttributeProcessingException (configured attribute property does not exist) ===
+
+    [Fact]
+    public void NamingAttribute_WithUnknownProperty_ThrowsAttributeProcessingException()
+    {
+        var naming = new Dictionary<string, string> { { nameof(System.Text.Json.Serialization.JsonPropertyNameAttribute), "NoSuchProperty" } }.ToFrozenDictionary();
+
+        var ex = Assert.Throws<AttributeProcessingException>(() =>
+            ParametersBuilder.ForLocalDto().WithSerializationNaming(naming).BuildGenerator().BuildFileFromType(typeof(SimpleObject)));
+
+        Assert.Contains("No property name [NoSuchProperty]", ex.Message);
+        Assert.Equal(nameof(System.Text.Json.Serialization.JsonPropertyNameAttribute), ex.AttributeName);
+    }
+
+    // === CamelCase off keeps the C# spelling ===
+
+    [Fact]
+    public void CamelCase_Disabled_KeepsPascalCaseNames()
+    {
+        var ts = ParametersBuilder.ForLocalDto().WithCamelCase(false).BuildGenerator().BuildFileFromType(typeof(CollectionsDto));
+
+        Assert.Contains("Numbers: number[];", ts);
+        Assert.DoesNotContain("numbers:", ts);
+    }
+
+    // === Verbose output carries the debug header ===
+
+    [Fact]
+    public void Verbose_EmitsDebugCommentsAndVersion()
+    {
+        var ts = ParametersBuilder.ForLocalDto().WithVerbose().BuildGenerator().BuildFileFromType(typeof(AttributedType));
+
+        Assert.StartsWith("//Debug mode", ts);
+        Assert.Contains("//C# to TypeScript class converter v", ts);
+        Assert.Contains("//Serialization of the property [Number] is blocked", ts);
+        Assert.Contains("//Property has non-nullable attribute", ts);
     }
 
     // === Fix 3: ExcludedNamespace uses StartsWith (not Contains) ===

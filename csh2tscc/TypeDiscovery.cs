@@ -5,7 +5,10 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
     internal List<Type> GetTypes()
     {
         var types = new List<Type>();
-        var filePaths = parameters.LibraryFileNames.Select(x => Path.GetDirectoryName(Path.GetFullPath(x))).ToList();
+        var filePaths = parameters.LibraryFileNames
+            .Select(x => Path.GetDirectoryName(Path.GetFullPath(x)))
+            .OfType<string>()
+            .ToList();
         var context = new CustomAssemblyLoadContext(filePaths);
         foreach (var param in parameters.LibraryFileNames)
         {
@@ -86,10 +89,10 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
         return !TypeAlreadyExists(type, existingTypes);
     }
 
-    private int RemoveTypes(List<Type> types) => types.RemoveAll(ShouldFilterType);
+    private void RemoveTypes(List<Type> types) => types.RemoveAll(ShouldFilterType);
 
+    // Custom-mapped types never make it into the list: AddType skips them before adding.
     private bool ShouldFilterType(Type type) =>
-        HasCustomMapping(type) ||
         ExcludedType(type.FullName) ||
         IsCollectionType(type);
 
@@ -111,10 +114,19 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
             : type;
 
     private bool IsExportableType(Type type) =>
-        (IncludedType(type.FullName) &&
-        !IsCompilerGeneratedType(type) &&
-        !ExcludedType(type.FullName))
-        || TypeHasExportAttribute(type);
+        CanBeDto(type) &&
+        ((IncludedType(type.FullName) &&
+          !IsCompilerGeneratedType(type) &&
+          !ExcludedType(type.FullName))
+         || TypeHasExportAttribute(type));
+
+    /// <summary>
+    /// A delegate or a static class is never serialized, whatever namespace it lives in: the
+    /// first would come out as an interface of its Target/Method, the second as an empty one.
+    /// </summary>
+    private static bool CanBeDto(Type type) =>
+        !typeof(Delegate).IsAssignableFrom(type) &&
+        type is not { IsAbstract: true, IsSealed: true };
 
     private bool TypeHasExportAttribute(Type type)
     {
@@ -146,8 +158,10 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
     private static bool TypeAlreadyExists(Type type, List<Type> existingTypes) =>
         existingTypes.Any(existing => TypeNamesMatch(existing, type));
 
+    // Compared by the full name of the definition, so that Wrapper<string> and Wrapper<int> — one
+    // generated file, one import — count as the same type.
     private static bool TypeNamesMatch(Type a, Type b) =>
-        TypeNameHelper.NormalizeClassName(a.FullName ?? a.Name) == TypeNameHelper.NormalizeClassName(b.FullName ?? b.Name);
+        TypeNameHelper.GetNormalizedTypeScriptName(a, useFullNames: true) == TypeNameHelper.GetNormalizedTypeScriptName(b, useFullNames: true);
 
     private bool HasCustomMapping(Type type) =>
         parameters.CustomMap.ContainsKey(type.Name) ||
@@ -160,8 +174,15 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
 
     /// <summary>
     /// Prefix match with a dot boundary: "My.DTO" covers "My.DTO" and "My.DTO.Sub.Type",
-    /// but not the neighboring namespace "My.DTOther".
+    /// but not the neighboring namespace "My.DTOther". A type name is matched the way it is
+    /// written in C#: without the generic arity ("My.DTO.Box" selects Box&lt;T&gt;, whose CLR name
+    /// is "My.DTO.Box`1"), and covering its nested types ("My.DTO.Box+Item").
     /// </summary>
-    private static bool IsWithinNamespace(string needle, string namespacePrefix) =>
-        needle == namespacePrefix || needle.StartsWith(namespacePrefix + '.');
+    private static bool IsWithinNamespace(string needle, string namespacePrefix)
+    {
+        var name = TypeNameHelper.NormalizeClassName(needle);
+        return name == namespacePrefix ||
+               name.StartsWith(namespacePrefix + '.') ||
+               name.StartsWith(namespacePrefix + '+');
+    }
 }

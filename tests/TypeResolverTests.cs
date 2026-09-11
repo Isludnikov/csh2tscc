@@ -166,4 +166,40 @@ public class TypeResolverTests
         var config = ParametersBuilder.ForLocalDto().WithUnknownTypesToString().Build();
         Assert.Equal("string", Resolve(typeof(Stream), config, container: BooleanContainer.CreateFalse()));
     }
+
+    [Fact]
+    public void UnsupportedType_KeepsNullability_WhenUnknownToStringEnabled()
+    {
+        var config = ParametersBuilder.ForLocalDto().WithUnknownTypesToString().Build();
+        Assert.Equal("string | null", Resolve(typeof(Stream), config, isNullable: true, container: BooleanContainer.CreateFalse()));
+    }
+
+    [Fact]
+    public void NullableEnumKeyedDictionary_FallsBackToMap() =>
+        Assert.Equal("Map<SimpleEnum | null, number>", Resolve(typeof(Dictionary<SimpleEnum?, int>), container: BooleanContainer.CreateFalse()));
+
+    [Fact]
+    public void JaggedArray_ResolvesWithTwoSuffixes() =>
+        Assert.Equal("number[][]", Resolve(typeof(int[][]), container: BooleanContainer.CreateFalse()));
+
+    [Fact]
+    public void ArrayOfNullableElements_IsParenthesised() =>
+        Assert.Equal("(string | null)[]", Resolve(typeof(string[]), container: BooleanContainer.CreateTrue()));
+
+    [Fact]
+    public void ArrayOfRecords_IsNotParenthesised() =>
+        Assert.Equal("Record<string, number>[]", Resolve(typeof(Dictionary<string, int>[]), container: BooleanContainer.CreateFalse()));
+
+    [Fact]
+    public void NestedGenericWithoutOwnParameters_PassesTheOuterArgument() =>
+        Assert.Equal("Leaf<string>", Resolve(typeof(OuterContainer<string>.Leaf), container: BooleanContainer.CreateFalse()));
+
+    [Fact]
+    public void ComplexTypeWithoutContainer_Throws()
+    {
+        // A complex type needs the nullable flags of its arguments; the builder always supplies
+        // them, so a missing container is a programming error and must say so.
+        var ex = Assert.Throws<InvalidOperationException>(() => Resolve(typeof(List<string>)));
+        Assert.Contains("BooleanContainer", ex.Message);
+    }
 }

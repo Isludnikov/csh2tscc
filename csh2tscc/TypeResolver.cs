@@ -111,15 +111,51 @@ internal class TypeResolver(TypesGeneratorParameters parameters, TypeDiscovery d
         return null;
     }
 
-    private string? TryResolveArrayType(PropertyTypeExtractionContext context, Type propertyType, BooleanContainer nullableList, bool nullable)
+    private string? TryResolveArrayType(PropertyTypeExtractionContext context, Type propertyType, BooleanContainer nullableList)
     {
         if (!propertyType.IsArray)
         {
             return null;
         }
 
-        var elementContext = context.CreateDerived(propertyType.GetElementType()!, nullableList, nullable);
-        return ResolveTypeToTypeScript(elementContext) + TypeScriptConstants.ArraySuffix;
+        // The element is the next node of the nullable flags after the array itself, exactly like a
+        // generic argument: string?[] is [1, 2] and string[]? is [2, 1].
+        var elementType = propertyType.GetElementType()!;
+        var elementContext = context.CreateDerived(elementType, nullableList, GetNullabilityForGenericArg(elementType, nullableList));
+        return AsArray(ResolveTypeToTypeScript(elementContext));
+    }
+
+    /// <summary>
+    /// Appends the array suffix. A union element must be parenthesised: <c>string | null[]</c>
+    /// reads as <c>string | (null[])</c> in TypeScript.
+    /// </summary>
+    private static string AsArray(string elementType) =>
+        (HasTopLevelUnion(elementType) ? $"({elementType})" : elementType) + TypeScriptConstants.ArraySuffix;
+
+    /// <summary>
+    /// Whether a type expression is a union at its top level: a bar inside brackets or parentheses
+    /// (<c>Record&lt;string, string | null&gt;</c>, <c>(string | null)[]</c>) binds tighter than
+    /// the array suffix already and needs no wrapping.
+    /// </summary>
+    private static bool HasTopLevelUnion(string typeExpression)
+    {
+        var depth = 0;
+        foreach (var c in typeExpression)
+        {
+            switch (c)
+            {
+                case '(' or '<' or '[':
+                    ++depth;
+                    break;
+                case ')' or '>' or ']':
+                    --depth;
+                    break;
+                case '|' when depth == 0:
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     private static readonly Type[] DictionaryInterfaces = [typeof(IDictionary<,>), typeof(IReadOnlyDictionary<,>)];
@@ -141,18 +177,11 @@ internal class TypeResolver(TypesGeneratorParameters parameters, TypeDiscovery d
 
         var genericArguments = dictionaryInterface.GetGenericArguments();
 
-        var keyContext = context.CreateDerived(
-            genericArguments[0],
-            nullableList,
-            GetNullabilityForGenericArg(genericArguments[0], nullableList));
-
-        var valueContext = context.CreateDerived(
-            genericArguments[1],
-            nullableList,
-            GetNullabilityForGenericArg(genericArguments[1], nullableList));
-
-        var key = ResolveTypeToTypeScript(keyContext);
-        var value = ResolveTypeToTypeScript(valueContext);
+        // The nullable flags are laid out depth-first: the key's own flag is followed by the flags
+        // of the key's type arguments, and only then comes the value. Each argument must therefore
+        // be fully resolved before the next one's flag is read.
+        var key = ResolveGenericArgument(context, genericArguments[0], nullableList);
+        var value = ResolveGenericArgument(context, genericArguments[1], nullableList);
 
         // A dictionary serializes to a JSON object, which is Record<K, V> on the TypeScript side;
         // Map is a different runtime thing and never arrives over the wire. Record constrains its
@@ -165,10 +194,12 @@ internal class TypeResolver(TypesGeneratorParameters parameters, TypeDiscovery d
         return $"{container}{TypeScriptConstants.GenericOpen}{key}{TypeScriptConstants.GenericSeparator}{value}{TypeScriptConstants.GenericClose}";
     }
 
+    // A key that admits null ("string | null") is not a valid Record key either.
     private static bool IsValidRecordKey(Type keyType, string resolvedKey) =>
-        UnwrapNullableType(keyType).IsEnum ||
-        resolvedKey == TypeScriptConstants.StringType ||
-        resolvedKey == TypeScriptConstants.NumberType;
+        !resolvedKey.Contains('|') &&
+        (UnwrapNullableType(keyType).IsEnum ||
+         resolvedKey == TypeScriptConstants.StringType ||
+         resolvedKey == TypeScriptConstants.NumberType);
 
     private string? TryResolveEnumerableType(PropertyTypeExtractionContext context, Type propertyType, BooleanContainer nullableList)
     {
@@ -182,13 +213,16 @@ internal class TypeResolver(TypesGeneratorParameters parameters, TypeDiscovery d
         var genericArguments = propertyType.IsGenericType
             ? propertyType.GetGenericArguments()
             : propertyType.GetInterfaces().First(i => i.InstanceOfGenericType(typeof(IEnumerable<>))).GetGenericArguments();
-        var elementContext = context.CreateDerived(
-            genericArguments[0],
-            nullableList,
-            GetNullabilityForGenericArg(genericArguments[0], nullableList));
 
-        return $"{ResolveTypeToTypeScript(elementContext)}{TypeScriptConstants.ArraySuffix}";
+        return AsArray(ResolveGenericArgument(context, genericArguments[0], nullableList));
     }
+
+    /// <summary>
+    /// Reads the nullable flag of one type argument and resolves it before returning, so that the
+    /// flags of nested arguments are consumed in the depth-first order the compiler wrote them.
+    /// </summary>
+    private string ResolveGenericArgument(PropertyTypeExtractionContext context, Type argument, BooleanContainer nullableList) =>
+        ResolveTypeToTypeScript(context.CreateDerived(argument, nullableList, GetNullabilityForGenericArg(argument, nullableList)));
 
     private string? TryResolveGenericType(PropertyTypeExtractionContext context, Type propertyType, BooleanContainer nullableList)
     {
@@ -206,17 +240,14 @@ internal class TypeResolver(TypesGeneratorParameters parameters, TypeDiscovery d
             return null;
         }
 
-        // For nested generic types, GetGenericArguments() returns the declaring (outer)
-        // type's parameters first, followed by the nested type's own parameters. Take the
-        // LAST localCount arguments so we select the locally-declared ones, not the outer ones.
-        var localGenericArguments = propertyType.GetGenericArguments()
-            .TakeLast(GenericHelper.LocalGenericParameterCount(propertyType))
-            .ToArray();
-
-        var typeArgs = localGenericArguments
-            .Select(arg => ResolveTypeToTypeScript(
-                context.CreateDerived(arg, nullableList, GetNullabilityForGenericArg(arg, nullableList))))
-            .Aggregate((a, b) => a + TypeScriptConstants.GenericSeparator + b);
+        // For a nested generic type, GetGenericArguments() lists the declaring (outer) type's
+        // parameters first, then the type's own. The generated interface declares all of them
+        // (TypeScriptBuilder emits the same list as its header, and the members do use the outer
+        // ones), so a reference has to pass all of them as well or the arity will not match.
+        // string.Join enumerates lazily in order, which keeps the nullable flags depth-first.
+        var typeArgs = string.Join(
+            TypeScriptConstants.GenericSeparator,
+            propertyType.GetGenericArguments().Select(arg => ResolveGenericArgument(context, arg, nullableList)));
 
         return $"{TypeNameHelper.GetNormalizedTypeScriptName(propertyType, parameters.UseFullNames)}{TypeScriptConstants.GenericOpen}{typeArgs}{TypeScriptConstants.GenericClose}";
     }
@@ -226,7 +257,7 @@ internal class TypeResolver(TypesGeneratorParameters parameters, TypeDiscovery d
         var nullableList = GetNullableContainer(context);
 
         // Array types
-        if (TryResolveArrayType(context, propertyType, nullableList, nullable) is { } arrayType)
+        if (TryResolveArrayType(context, propertyType, nullableList) is { } arrayType)
         {
             return CommonHelper.GetPropertyTypeWithNullable(arrayType, nullable);
         }
@@ -256,7 +287,7 @@ internal class TypeResolver(TypesGeneratorParameters parameters, TypeDiscovery d
         }
 
         return parameters.UnknownTypesToString ?
-            TypeScriptConstants.StringType :
+            CommonHelper.GetPropertyTypeWithNullable(TypeScriptConstants.StringType, nullable) :
             throw new UnsupportedTypeException(propertyType);
     }
 
@@ -282,7 +313,9 @@ internal class TypeResolver(TypesGeneratorParameters parameters, TypeDiscovery d
         ?? throw new InvalidOperationException(
             $"BooleanContainer should not be null for complex property type. Property: {context.PropInfo?.Name}, Type: {context.PropertyType}");
 
+    // A generic closed over a type parameter (SimpleGenericType<T>) has a null FullName; comparing
+    // nulls would make any such type "affected" by any other, so those are matched by identity.
     private static bool IsAffectedOrGenericType(PropertyTypeExtractionContext context, Type propertyType) =>
-        context.AffectedTypes.Any(x => x.FullName == propertyType.FullName) ||
+        context.AffectedTypes.Any(x => x == propertyType || (x.FullName != null && x.FullName == propertyType.FullName)) ||
         context.GenericTypes.Any(x => x.Name == propertyType.Name);
 }

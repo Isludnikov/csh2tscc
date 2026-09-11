@@ -217,10 +217,11 @@ internal sealed class XmlDocProvider
         }
 
         // "T:My.Namespace.Type" and "P:My.Namespace.Type.Prop" both reduce to the last segment:
-        // the full name is a C# address that means nothing on the TypeScript side.
+        // the full name is a C# address that means nothing on the TypeScript side. A method's
+        // parameter list ("M:My.Type.Run(System.String)") goes first, or its dots would win.
         var withoutPrefix = target.Length > 1 && target[1] == ':' ? target[2..] : target;
-        var lastSegment = withoutPrefix.Split('.').Last();
-        return lastSegment.Split('(')[0];
+        var withoutParameters = withoutPrefix.Split('(')[0];
+        return TypeNameHelper.NormalizeClassName(withoutParameters.Split('.').Last());
     }
 
     private static string Normalize(string raw)

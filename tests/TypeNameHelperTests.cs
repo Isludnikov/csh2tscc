@@ -18,10 +18,35 @@ public class TypeNameHelperTests
     }
 
     [Fact]
-    public void NormalizeClassName_UsesLastIndexOfBacktick()
+    public void NormalizeClassName_StripsEveryArityOfNestedGenerics()
     {
-        // Nested generics like "Outer`1+Inner`1": LastIndexOf trims at the last backtick.
-        Assert.Equal("Outer`1+Inner", TypeNameHelper.NormalizeClassName("Outer`1+Inner`1"));
+        // Nested generics like "Outer`1+Inner`1" carry one arity suffix per level.
+        Assert.Equal("Outer+Inner", TypeNameHelper.NormalizeClassName("Outer`1+Inner`1"));
+    }
+
+    [Fact]
+    public void NormalizeClassName_StripsGenericMethodArity()
+    {
+        Assert.Equal("Run", TypeNameHelper.NormalizeClassName("Run``1"));
+    }
+
+    [Fact]
+    public void GetTypeScriptName_NestedType_FullName_PlusBecomesUnderscore()
+    {
+        var result = TypeNameHelper.GetNormalizedTypeScriptName(typeof(DTO.OuterContainer<>.InnerContainer<>), useFullNames: true);
+        Assert.Equal("tests_DTO_OuterContainer_InnerContainer", result);
+    }
+
+    [Fact]
+    public void GetTypeScriptName_ConstructedGeneric_IsNamedAfterItsDefinition()
+    {
+        // The FullName of a constructed generic spells out every argument with its assembly;
+        // the name must be the definition's, whatever the arguments are.
+        var nested = TypeNameHelper.GetNormalizedTypeScriptName(typeof(List<List<string>>), useFullNames: true);
+        var flat = TypeNameHelper.GetNormalizedTypeScriptName(typeof(List<int>), useFullNames: true);
+
+        Assert.Equal("System_Collections_Generic_List", nested);
+        Assert.Equal(nested, flat);
     }
 
     [Fact]

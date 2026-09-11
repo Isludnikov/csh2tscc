@@ -42,6 +42,28 @@ public class IsNullableHelperTests
         Assert.True(container.GetValueAndMoveNext());
     }
 
+    [Theory]
+    [InlineData(typeof(NestedNullabilityDto.Nested), nameof(NestedNullabilityDto.Nested.C), false)]
+    [InlineData(typeof(NestedNullabilityDto.Nested), nameof(NestedNullabilityDto.Nested.D), true)]
+    [InlineData(typeof(NestedNullabilityDto.Nested.Deeper), nameof(NestedNullabilityDto.Nested.Deeper.F), false)]
+    public void IsNullable_NestedType_InheritsTheOuterNullableContext(Type type, string propertyName, bool expected)
+    {
+        // The compiler puts NullableContext on the outermost type only.
+        Assert.Empty(type.CustomAttributes.Where(a => a.AttributeType.FullName == WellKnownNames.NullableContextAttributeName));
+
+        Assert.Equal(expected, IsNullableHelper.IsNullable(type, type.GetProperty(propertyName)!));
+    }
+
+    [Fact]
+    public void IsNullableContainer_GenericStruct_UsesTheArgumentFlags()
+    {
+        // Pair<string?, string> is written as [0, 2, 1]: the struct itself, then its arguments.
+        var container = IsNullableHelper.IsNullableContainer(typeof(GenericStructDto), typeof(GenericStructDto).GetProperty(nameof(GenericStructDto.Pair))!);
+
+        Assert.True(container.GetValueAndMoveNext());
+        Assert.False(container.GetValueAndMoveNext());
+    }
+
     [Fact]
     public void IsNullableContainer_GenericArg_ReflectsInnerNullability()
     {
