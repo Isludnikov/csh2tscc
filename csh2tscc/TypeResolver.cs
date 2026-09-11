@@ -1,14 +1,17 @@
 namespace csh2tscc;
 
-internal class TypeResolver(TypesGeneratorParameters parameters)
+internal class TypeResolver(TypesGeneratorParameters parameters, TypeDiscovery discovery)
 {
     private static readonly Type[] NumberTypes = [
         typeof(int), typeof(uint), typeof(short), typeof(byte), typeof(sbyte), typeof(long), typeof(ulong),
         typeof(float), typeof(double), typeof(ushort), typeof(decimal)
     ];
 
+    // Types that serialize as a JSON string. DateTimeOffset, DateOnly and TimeOnly belong here for
+    // the same reason DateTime does: System.Text.Json writes all of them as ISO-8601 text.
     private static readonly Type[] ToStringTypes = [
-        typeof(Guid), typeof(DateTime), typeof(Uri), typeof(TimeSpan)
+        typeof(Guid), typeof(DateTime), typeof(DateTimeOffset), typeof(DateOnly), typeof(TimeOnly),
+        typeof(Uri), typeof(TimeSpan)
     ];
 
     internal string ResolveTypeToTypeScript(PropertyTypeExtractionContext context)
@@ -84,6 +87,18 @@ internal class TypeResolver(TypesGeneratorParameters parameters)
         // Enum types
         if (propertyType.IsEnum)
         {
+            // An enum outside the generated set has no file to import from, and enums are named
+            // without an import at all — so emitting the name would leave a dangling reference
+            // that surfaces far from its cause, or not at all when the name exists globally
+            // (System.DayOfWeek is the textbook case). Refusing here names the actual type.
+            // The escape hatch is CustomMap, checked above this.
+            if (!discovery.IsGeneratedType(propertyType))
+            {
+                return parameters.UnknownTypesToString
+                    ? CommonHelper.GetPropertyTypeWithNullable(TypeScriptConstants.StringType, nullable)
+                    : throw new UnsupportedTypeException(propertyType);
+            }
+
             return CommonHelper.GetPropertyTypeWithNullable(TypeNameHelper.GetTypeScriptName(propertyType, parameters.UseFullNames), nullable);
         }
 
@@ -136,8 +151,24 @@ internal class TypeResolver(TypesGeneratorParameters parameters)
             nullableList,
             GetNullabilityForGenericArg(genericArguments[1], nullableList));
 
-        return $"{TypeScriptConstants.MapType}{TypeScriptConstants.GenericOpen}{ResolveTypeToTypeScript(keyContext)}{TypeScriptConstants.GenericSeparator}{ResolveTypeToTypeScript(valueContext)}{TypeScriptConstants.GenericClose}";
+        var key = ResolveTypeToTypeScript(keyContext);
+        var value = ResolveTypeToTypeScript(valueContext);
+
+        // A dictionary serializes to a JSON object, which is Record<K, V> on the TypeScript side;
+        // Map is a different runtime thing and never arrives over the wire. Record constrains its
+        // key to string | number | symbol, so anything else falls back to Map rather than to code
+        // that does not compile.
+        var container = IsValidRecordKey(genericArguments[0], key)
+            ? TypeScriptConstants.RecordType
+            : TypeScriptConstants.MapType;
+
+        return $"{container}{TypeScriptConstants.GenericOpen}{key}{TypeScriptConstants.GenericSeparator}{value}{TypeScriptConstants.GenericClose}";
     }
+
+    private static bool IsValidRecordKey(Type keyType, string resolvedKey) =>
+        UnwrapNullableType(keyType).IsEnum ||
+        resolvedKey == TypeScriptConstants.StringType ||
+        resolvedKey == TypeScriptConstants.NumberType;
 
     private string? TryResolveEnumerableType(PropertyTypeExtractionContext context, Type propertyType, BooleanContainer nullableList)
     {
@@ -162,6 +193,15 @@ internal class TypeResolver(TypesGeneratorParameters parameters)
     private string? TryResolveGenericType(PropertyTypeExtractionContext context, Type propertyType, BooleanContainer nullableList)
     {
         if (!propertyType.IsGenericType)
+        {
+            return null;
+        }
+
+        // Same dangling-reference trap as with enums, one level up: a generic type outside the
+        // generated set (KeyValuePair<K, V> is the one that actually shows up) would be printed
+        // by name with nothing behind it. Declining here lets the affected-types check below have
+        // its say, and an unresolved type ends as UnsupportedTypeException rather than as output.
+        if (!discovery.IsGeneratedType(propertyType))
         {
             return null;
         }

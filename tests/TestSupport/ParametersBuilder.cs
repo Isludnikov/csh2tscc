@@ -24,6 +24,8 @@ public sealed class ParametersBuilder
     private bool _cleanOutputDirectory;
     private bool _verbose;
     private bool _unknownTypesToString;
+    private bool _generateJsDoc;
+    private bool _optionalNullable;
     private string _fileExtension = ".tsx";
     private string _outputDirectory = "";
 
@@ -79,6 +81,8 @@ public sealed class ParametersBuilder
     public ParametersBuilder WithCleanOutputDirectory(bool value = true) { _cleanOutputDirectory = value; return this; }
     public ParametersBuilder WithVerbose(bool value = true) { _verbose = value; return this; }
     public ParametersBuilder WithUnknownTypesToString(bool value = true) { _unknownTypesToString = value; return this; }
+    public ParametersBuilder WithJsDoc(bool value = true) { _generateJsDoc = value; return this; }
+    public ParametersBuilder WithOptionalNullable(bool value = true) { _optionalNullable = value; return this; }
     public ParametersBuilder WithFileExtension(string extension) { _fileExtension = extension; return this; }
     public ParametersBuilder WithOutputDirectory(string directory) { _outputDirectory = directory; return this; }
 
@@ -97,6 +101,8 @@ public sealed class ParametersBuilder
         OutputDirectory = _outputDirectory,
         Verbose = _verbose,
         UnknownTypesToString = _unknownTypesToString,
+        GenerateJsDoc = _generateJsDoc,
+        OptionalNullableProperties = _optionalNullable,
         ExportAttributes = _exportAttributes
     };
 

@@ -13,7 +13,8 @@ public class TypeResolverTests
         bool suppressNullable = false,
         BooleanContainer? container = null)
     {
-        var resolver = new TypeResolver(config ?? ParametersBuilder.ForLocalDto().Build());
+        var parameters = config ?? ParametersBuilder.ForLocalDto().Build();
+        var resolver = new TypeResolver(parameters, new TypeDiscovery(parameters));
         var context = new PropertyTypeExtractionContext
         {
             ClassToWrite = typeof(object),
@@ -52,6 +53,9 @@ public class TypeResolverTests
     [Theory]
     [InlineData(typeof(Guid))]
     [InlineData(typeof(DateTime))]
+    [InlineData(typeof(DateTimeOffset))]
+    [InlineData(typeof(DateOnly))]
+    [InlineData(typeof(TimeOnly))]
     [InlineData(typeof(Uri))]
     [InlineData(typeof(TimeSpan))]
     public void ToStringTypes_ResolveToString(Type type)
@@ -102,12 +106,52 @@ public class TypeResolverTests
         Assert.Equal("string[]", Resolve(typeof(CustomStringList), container: BooleanContainer.CreateFalse()));
 
     [Fact]
-    public void Dictionary_ResolvesToMap() =>
-        Assert.Equal("Map<string, number>", Resolve(typeof(Dictionary<string, int>), container: BooleanContainer.CreateFalse()));
+    public void Dictionary_ResolvesToRecord() =>
+        Assert.Equal("Record<string, number>", Resolve(typeof(Dictionary<string, int>), container: BooleanContainer.CreateFalse()));
 
     [Fact]
-    public void ReadOnlyDictionary_ResolvesToMap() =>
-        Assert.Equal("Map<string, number>", Resolve(typeof(IReadOnlyDictionary<string, int>), container: BooleanContainer.CreateFalse()));
+    public void ReadOnlyDictionary_ResolvesToRecord() =>
+        Assert.Equal("Record<string, number>", Resolve(typeof(IReadOnlyDictionary<string, int>), container: BooleanContainer.CreateFalse()));
+
+    [Fact]
+    public void EnumKeyedDictionary_ResolvesToRecord() =>
+        Assert.Equal("Record<SimpleEnum, number>", Resolve(typeof(Dictionary<SimpleEnum, int>), container: BooleanContainer.CreateFalse()));
+
+    [Fact]
+    public void DictionaryWithUnusableRecordKey_FallsBackToMap() =>
+        // Record constrains its key to string | number | symbol, and "unknown" is none of those.
+        Assert.Equal(
+            "Map<unknown, number>",
+            Resolve(typeof(Dictionary<object, int>), container: BooleanContainer.CreateFalse()));
+
+    [Fact]
+    public void EnumOutsideSelection_Throws()
+    {
+        // System.DayOfWeek is an enum no selection covers: naming it would leave a reference to
+        // a file that is never generated.
+        Assert.Throws<UnsupportedTypeException>(() => Resolve(typeof(DayOfWeek)));
+    }
+
+    [Fact]
+    public void EnumOutsideSelection_ResolvesToString_WhenUnknownToStringEnabled()
+    {
+        var config = ParametersBuilder.ForLocalDto().WithUnknownTypesToString().Build();
+        Assert.Equal("string", Resolve(typeof(DayOfWeek), config));
+    }
+
+    [Fact]
+    public void EnumOutsideSelection_IsStillMappable()
+    {
+        var config = ParametersBuilder.ForLocalDto().WithCustomMap(("DayOfWeek", "number")).Build();
+        Assert.Equal("number", Resolve(typeof(DayOfWeek), config));
+    }
+
+    [Fact]
+    public void GenericTypeOutsideSelection_Throws()
+    {
+        Assert.Throws<UnsupportedTypeException>(() =>
+            Resolve(typeof(KeyValuePair<string, string>), container: BooleanContainer.CreateFalse()));
+    }
 
     [Fact]
     public void UnsupportedType_Throws_WhenUnknownToStringDisabled()

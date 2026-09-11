@@ -28,9 +28,17 @@ public static class TypeScriptConstants
     public const char GenericClose = '>';
     public const string GenericSeparator = ", ";
     public const string MapType = "Map";
+    public const string RecordType = "Record";
 
-    // Import statement format: {0} = type name
-    public const string ImportFormat = "import {{ {0} }} from \"./{0}\";";
+    // Quote character of every string literal in the output. Single throughout: generated files
+    // sit next to hand-written ones and are checked by the same formatter, which picks one style.
+    public const char StringQuote = '\'';
+
+    // Import statement formats: {0} = type name. An interface exists only at compile time, and
+    // TypeScript configured with verbatimModuleSyntax insists that such an import say so; an enum
+    // is a real runtime object and must stay a value import.
+    public const string ImportFormat = "import {{ {0} }} from './{0}';";
+    public const string ImportTypeFormat = "import type {{ {0} }} from './{0}';";
 
     // Character used to identify compiler-generated types
     public const char CompilerGeneratedTypeIndicator = '<';

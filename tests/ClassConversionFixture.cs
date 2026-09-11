@@ -49,7 +49,7 @@ public class ClassConversionFixture
                 "export interface MultiGenericType<T, D>",
                 "name: string;",
                 "type: T;",
-                "value?: D | null;"
+                "value: D | null;"
             ]
         };
         yield return new ClassConversionFixture
@@ -58,11 +58,11 @@ public class ClassConversionFixture
             ShouldContain = [
                 "export interface ComplexType<T>",
                 "id: number;",
-                "number?: number | null;",
+                "number: number | null;",
                 "name: string;",
-                "description?: string | null;",
+                "description: string | null;",
                 "guid: string;",
-                "dictionary?: Map<string, Map<T, SimpleGenericType<T | null> | null> | null> | null;"
+                "dictionary: Record<string, Map<T, SimpleGenericType<T | null> | null> | null> | null;"
             ]
         };
         yield return new ClassConversionFixture
@@ -71,14 +71,14 @@ public class ClassConversionFixture
             ShouldContain = [
                 "export interface AttributedType",
                 "id: number;", "name: string;",
-                "number2?: number | null;",
+                "number2: number | null;",
                 "description: string;",
                 "UUID: string;"
             ],
             ShouldNotContain = [
-                "number?: number | null;",
+                "number: number | null;",
                 "guid: string;",
-                "description?: string | null;"
+                "description: string | null;"
             ]
         };
         yield return new ClassConversionFixture
@@ -105,7 +105,7 @@ public class ClassConversionFixture
                 "intList: number[];",
                 "stringEnumerable: string[];",
                 "intSet: number[];",
-                "readOnlyMap: Map<string, number>;"
+                "readOnlyMap: Record<string, number>;"
             ],
             ShouldNotContain = [
                 "number[] | null",
@@ -133,9 +133,22 @@ public class ClassConversionFixture
         };
         yield return new ClassConversionFixture
         {
+            // An enum is a runtime object and must be imported as a value; an interface exists
+            // only at compile time and has to say so where verbatimModuleSyntax is on.
+            Klass = typeof(MixedImportsDto),
+            ShouldContain = [
+                "import { SimpleEnum } from './SimpleEnum';",
+                "import type { SimpleObject } from './SimpleObject';",
+                "stage: SimpleEnum;",
+                "payload: SimpleObject;"
+            ],
+            ShouldNotContain = ["import type { SimpleEnum }"]
+        };
+        yield return new ClassConversionFixture
+        {
             Klass = typeof(ArrayOfComplexDto),
             ShouldContain = [
-                "import { SimpleObject }",
+                "import type { SimpleObject } from './SimpleObject';",
                 "export interface ArrayOfComplexDto",
                 "items: SimpleObject[];"
             ]
@@ -145,7 +158,7 @@ public class ClassConversionFixture
             Klass = typeof(InterfaceDictionaryDto),
             ShouldContain = [
                 "export interface InterfaceDictionaryDto",
-                "map: Map<string, number>;"
+                "map: Record<string, number>;"
             ]
         };
         yield return new ClassConversionFixture
@@ -179,7 +192,7 @@ public class ClassConversionFixture
             ShouldContain = [
                 "export interface TreeNode<T>",
                 "value: T;",
-                "parent?: TreeNode<T> | null;",
+                "parent: TreeNode<T> | null;",
                 "children: TreeNode<T>[];"
             ],
             ShouldNotContain = [

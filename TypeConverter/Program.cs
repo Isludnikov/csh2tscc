@@ -56,6 +56,8 @@ internal static class Program
             SerializationNamingAttributes = opts.SerializationNaming.SplitToDictionary($"--{Options.SerializationNamingOption}"),
             Verbose = opts.Verbose,
             UnknownTypesToString = opts.UnknownTypeToString,
+            GenerateJsDoc = opts.GenerateJsDoc,
+            OptionalNullableProperties = opts.OptionalNullableProperties,
             ExportAttributes = opts.ExportAttributes.ToFrozenSet(),
         });
     }

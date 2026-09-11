@@ -74,7 +74,11 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
             return false;
         }
 
-        if (!IncludedType(type.Namespace) && !TypeHasExportAttribute(type))
+        // The full name is tried as well as the namespace so that naming a single type in the
+        // selection means the same here as it does in IsExportableType: a file is generated for it
+        // AND properties of that type are imported. Matching the namespace alone would generate
+        // the file and then refuse to reference it.
+        if (!IncludedType(type.Namespace) && !IncludedType(type.FullName) && !TypeHasExportAttribute(type))
         {
             return false;
         }
@@ -88,6 +92,23 @@ internal class TypeDiscovery(TypesGeneratorParameters parameters)
         HasCustomMapping(type) ||
         ExcludedType(type.FullName) ||
         IsCollectionType(type);
+
+    /// <summary>
+    /// Whether a file will be generated for this type, i.e. whether referring to it by name in
+    /// the output resolves to something. Asked by <see cref="TypeResolver"/> about types it is
+    /// about to name; the selection rules are here because <see cref="GetTypes"/> obeys the same.
+    /// </summary>
+    internal bool IsGeneratedType(Type type) => IsExportableType(RepresentativeType(type));
+
+    /// <summary>
+    /// The type whose selection decides the question. A constructed generic closed over a generic
+    /// parameter (SimpleGenericType&lt;T&gt; inside ComplexType&lt;T&gt;) reports a null FullName
+    /// and would match no namespace at all; its definition is what a file is generated for.
+    /// </summary>
+    private static Type RepresentativeType(Type type) =>
+        type is { IsGenericType: true, IsGenericTypeDefinition: false, FullName: null }
+            ? type.GetGenericTypeDefinition()
+            : type;
 
     private bool IsExportableType(Type type) =>
         (IncludedType(type.FullName) &&

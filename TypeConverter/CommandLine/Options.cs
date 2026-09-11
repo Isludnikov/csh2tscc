@@ -54,6 +54,14 @@ public class Options
     [Option("unknown2string", Required = false, Default = false, HelpText = "Map unknown type to string")]
     public bool UnknownTypeToString { get; set; }
 
+    [Option("jsdoc", Required = false, Default = false,
+        HelpText = "Carry XML documentation of the converted types over into JSDoc comments")]
+    public bool GenerateJsDoc { get; set; }
+
+    [Option("optionalnullable", Required = false, Default = false,
+        HelpText = "Mark nullable properties optional (name?: T | null) as well as nullable")]
+    public bool OptionalNullableProperties { get; set; }
+
     /// <summary>
     /// Validates option combinations that the parser cannot express. Extracted from Program so it
     /// can be unit-tested directly.

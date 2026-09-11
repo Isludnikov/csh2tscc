@@ -5,10 +5,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-	  <Version>1.0.1</Version>
-	  <AssemblyVersion>1.0.1.*</AssemblyVersion>
-	  <InformationalVersion>1.0.1</InformationalVersion>
-	  <FileVersion>1.0.1.0</FileVersion>
+	  <Version>1.1.0</Version>
+	  <AssemblyVersion>1.1.0.*</AssemblyVersion>
+	  <InformationalVersion>1.1.0</InformationalVersion>
+	  <FileVersion>1.1.0.0</FileVersion>
 	  <Product>Type converter</Product>
 	  <AssemblyTitle>Type converter</AssemblyTitle>
 	  <Deterministic>false</Deterministic>

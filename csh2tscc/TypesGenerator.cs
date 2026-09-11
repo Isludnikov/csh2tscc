@@ -10,7 +10,7 @@ public class TypesGenerator
     {
         _parameters = parameters;
         _discovery = new TypeDiscovery(parameters);
-        _builder = new TypeScriptBuilder(parameters, new TypeResolver(parameters), _discovery);
+        _builder = new TypeScriptBuilder(parameters, new TypeResolver(parameters, _discovery), _discovery);
     }
 
     public static TypesGenerator Create(TypesGeneratorParameters parameters) => new(parameters);

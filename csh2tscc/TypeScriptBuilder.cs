@@ -7,6 +7,10 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
 {
     private record AttributeProcessingResult(string Name, bool IsBlocked);
 
+    private const string MemberIndent = "  ";
+
+    private readonly XmlDocProvider _docs = new();
+
     private static readonly string? Title = typeof(TypeScriptBuilder).Assembly.GetCustomAttribute<AssemblyTitleAttribute>()?.Title;
     private static readonly string? Version = typeof(TypeScriptBuilder).Assembly.GetName().Version?.ToString();
     internal string BuildFileFromType(Type typeToWrite)
@@ -22,6 +26,7 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
 
     private StringBuilderCustom BuildFromEnum(Type typeToWrite, StringBuilderCustom sb)
     {
+        AppendDoc(sb, _docs.ForType(typeToWrite), string.Empty);
         sb.AppendLine($"{TypeScriptConstants.ExportEnum} {TypeNameHelper.GetTypeScriptName(typeToWrite, parameters.UseFullNames)} {{");
         var fields = typeToWrite.GetFields(BindingFlags.Static | BindingFlags.Public);
         foreach (var field in fields)
@@ -36,7 +41,9 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
                 continue;
             }
 
-            sb.AppendLine($"  {field.Name} = '{EscapeSingleQuoted(result.Name)}',");
+            var quote = TypeScriptConstants.StringQuote;
+            AppendDoc(sb, _docs.ForMember(field), MemberIndent);
+            sb.AppendLine($"{MemberIndent}{field.Name} = {quote}{EscapeQuoted(result.Name)}{quote},");
         }
 
         sb.AppendLine('}');
@@ -64,7 +71,10 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
                 continue;
             }
 
-            sb.AppendLine(string.Format(TypeScriptConstants.ImportFormat, importName));
+            var format = affType.IsEnum
+                ? TypeScriptConstants.ImportFormat
+                : TypeScriptConstants.ImportTypeFormat;
+            sb.AppendLine(string.Format(format, importName));
             importsAdded = true;
         }
 
@@ -73,6 +83,7 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
             sb.AppendLine();
         }
 
+        AppendDoc(sb, _docs.ForType(typeToWrite), string.Empty);
         sb.AppendLine($"{TypeScriptConstants.ExportInterface} {ownName}{genericHeader} {{");
 
         var properties = CommonHelper.GetSerializableProperties(typeToWrite);
@@ -114,7 +125,8 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
                 BooleanContainer = null,
                 IsNullable = isNullable
             };
-            sb.AppendLine($"  {result.Name}{(isNullable ? "?" : string.Empty)}: {resolver.ResolveTypeToTypeScript(context)};");
+            AppendDoc(sb, _docs.ForMember(property), MemberIndent);
+            sb.AppendLine($"{MemberIndent}{result.Name}{(isNullable && parameters.OptionalNullableProperties ? TypeScriptConstants.OptionalProperty : string.Empty)}: {resolver.ResolveTypeToTypeScript(context)};");
         }
 
         sb.AppendLine('}');
@@ -190,7 +202,20 @@ internal class TypeScriptBuilder(TypesGeneratorParameters parameters, TypeResolv
         return new AttributeProcessingResult(name, isBlocked);
     }
 
-    /// <summary>Escapes a value for embedding into a single-quoted TypeScript string literal.</summary>
-    private static string EscapeSingleQuoted(string value) =>
-        value.Replace("\\", "\\\\").Replace("'", "\\'");
+    private void AppendDoc(StringBuilderCustom sb, string? block, string indent)
+    {
+        if (!parameters.GenerateJsDoc || block == null)
+        {
+            return;
+        }
+
+        sb.AppendLine(XmlDocProvider.Indent(block, indent));
+    }
+
+    /// <summary>
+    /// Escapes a value for embedding into a TypeScript string literal quoted with
+    /// <see cref="TypeScriptConstants.StringQuote"/>.
+    /// </summary>
+    private static string EscapeQuoted(string value) =>
+        value.Replace("\\", "\\\\").Replace($"{TypeScriptConstants.StringQuote}", $"\\{TypeScriptConstants.StringQuote}");
 }

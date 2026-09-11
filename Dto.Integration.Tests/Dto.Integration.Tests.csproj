@@ -4,6 +4,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!--
+      The XML documentation file is what the JSDoc tests read: without it the generator has nothing
+      to carry over. CS1591 is off because only the DTOs exercising that feature are documented
+      here; the rest are fixtures for other behaviours and deliberately bare.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
